@@ -1,0 +1,13 @@
+{
+  "name": "@droid-kit/ui",
+  "description": "droid-kit React components",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

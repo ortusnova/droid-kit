@@ -1,0 +1,10 @@
+[package]
+name = "dk"
+description = "droid-kit command-line tool: build, run and check apps"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

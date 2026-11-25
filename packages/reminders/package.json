@@ -1,0 +1,13 @@
+{
+  "name": "@droid-kit/reminders",
+  "description": "droid-kit reminders",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  }
+}

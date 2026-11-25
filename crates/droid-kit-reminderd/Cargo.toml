@@ -1,0 +1,10 @@
+[package]
+name = "droid-kit-reminderd"
+description = "Linux user service that delivers droid-kit reminders"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]

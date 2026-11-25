@@ -6,5 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+links = "droid-kit-platform"
 
 [dependencies]
+tauri = { workspace = true }
+serde = { workspace = true }
+
+[build-dependencies]
+tauri-plugin = { workspace = true }

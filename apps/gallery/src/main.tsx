@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { onBackButtonPress } from '@tauri-apps/api/app';
+import { reportErrors, signalReady } from '@droid-kit/platform';
 
 type Facts = Record<string, string>;
 
@@ -25,6 +26,8 @@ function readFacts(): Facts {
 function Diagnostics() {
   const [facts, setFacts] = useState<Facts>({});
   const [backPresses, setBackPresses] = useState<string[]>([]);
+
+  useEffect(signalReady, []);
 
   useEffect(() => {
     const update = () => setFacts(readFacts());
@@ -67,6 +70,8 @@ function Diagnostics() {
     </main>
   );
 }
+
+reportErrors();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

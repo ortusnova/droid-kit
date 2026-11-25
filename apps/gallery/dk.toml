@@ -1,0 +1,5 @@
+# dk settings for the gallery. Machine-specific values (adb path, phone
+# address) go in dk.local.toml, which is not committed.
+[app]
+# The gallery lives inside the kit's workspace, so the whole kit is synced.
+root = "../.."

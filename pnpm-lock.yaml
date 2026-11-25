@@ -191,6 +191,9 @@ importers:
 
   apps/gallery:
     dependencies:
+      '@droid-kit/platform':
+        specifier: workspace:*
+        version: link:../../packages/platform
       '@tauri-apps/api':
         specifier: 2.12.5
         version: 2.12.5
@@ -223,7 +226,11 @@ importers:
         specifier: 8.3.8
         version: 8.3.8(@types/node@26.6.10)
 
-  packages/platform: {}
+  packages/platform:
+    devDependencies:
+      '@tauri-apps/api':
+        specifier: 2.12.5
+        version: 2.12.5
 
   packages/reminders: {}
 

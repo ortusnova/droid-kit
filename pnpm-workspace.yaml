@@ -1,3 +1,13 @@
 packages:
   - packages/*
   - apps/*
+
+# Apps are built both on the host (glibc) and in the Alpine build container
+# (musl), from the same node_modules, so install native packages for both.
+minimumReleaseAgeExclude:
+  - '@types/react@19.3.3'
+
+supportedArchitectures:
+  os: [linux]
+  cpu: [arm64, x64]
+  libc: [glibc, musl]

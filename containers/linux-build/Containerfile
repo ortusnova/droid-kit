@@ -1,0 +1,21 @@
+# Linux build image for droid-kit apps: Alpine edge (musl), the same C library
+# and WebKitGTK version as postmarketOS edge. Built and run natively on aarch64.
+#
+#   podman build -t localhost/droid-kit-linux:latest containers/linux-build
+FROM docker.io/library/alpine:edge
+
+RUN apk add --no-cache \
+      build-base pkgconf git curl file bash rsync \
+      rust cargo rustfmt rust-clippy \
+      nodejs npm \
+      webkit2gtk-4.1-dev gtk+3.0-dev libsoup3-dev openssl-dev \
+      libayatana-appindicator-dev librsvg-dev \
+      dbus dbus-x11 font-dejavu mesa-dri-gallium adwaita-icon-theme \
+ && npm install -g pnpm@12.23.0 @tauri-apps/cli@2.12.6 \
+ && rm -rf /root/.npm
+
+ENV CARGO_HOME=/cache/cargo \
+    PNPM_HOME=/cache/pnpm \
+    npm_config_store_dir=/cache/pnpm-store
+
+WORKDIR /work

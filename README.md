@@ -34,6 +34,74 @@ registry; everything comes from this repository.
 droid-kit-platform = { git = "https://github.com/ortusnova/droid-kit", tag = "v0.1.0" }
 ```
 
+## `dk`, the command-line tool
+
+Install it from a checkout of the kit, or straight from a tag:
+
+```sh
+cargo install --path crates/dk --locked
+cargo install --git https://github.com/ortusnova/droid-kit --tag v0.0.2 dk --locked
+```
+
+Run it in an app's directory (the one with `package.json` and `src-tauri/`),
+or pass `--app <dir>`. The examples below work as written from
+`apps/gallery`, except `dk kit local`, which needs an app that depends on
+the kit by tag; run that one from such an app.
+
+| Command | What it does |
+| --- | --- |
+| `dk doctor` | Lists what each target needs and whether it is ready. |
+| `dk run linux-desktop` | Builds the app in the Alpine (musl) image and opens it on this machine's Wayland session. |
+| `dk run android-phone` | Builds on the Android build host, installs on the phone over wireless debugging, and launches it. |
+| `dk run android-emulator` | Builds for x86_64 and runs it on the build host's emulator. |
+| `dk check` | Checks that every kit dependency names the same tag. |
+| `dk kit local ../droid-kit` | Uses a local kit checkout instead of the pinned tag. |
+| `dk kit pin` | Goes back to the pinned tag, restoring the dependency files exactly. |
+
+Examples:
+
+```sh
+dk doctor
+dk run linux-desktop
+dk run android-phone --timeout 120
+dk run android-emulator
+dk check
+dk kit local ~/dev/droid-kit   # from an app that pins a kit tag
+dk kit pin
+```
+
+`dk run` waits for the page to call `signalReady()` from `@droid-kit/platform`,
+then saves a screenshot and the app's log under `artifacts/`. It exits 1 if
+the page reports an error or the app exits, and 2 if no first screen appears
+within the timeout (90 seconds by default).
+
+### Settings
+
+`dk.toml` in the app's directory is committed. `dk.local.toml` next to it holds
+machine-specific values and is not committed. Both are optional.
+
+```toml
+[app]
+root = "."                                  # directory synced to the build host
+
+[android]
+host = "taichi"                             # ssh name of the Android build host
+host_root = "/opt/models/android-dev"       # its android-dev environment
+adb = "~/dev/android/android-tools/usr/bin/adb"
+phone = "192.168.1.123:40107"               # default: found with `adb mdns services`
+
+[linux]
+image = "localhost/droid-kit-linux:latest"  # built from containers/linux-build if missing
+```
+
+### Limits
+
+- `dk kit local` works with `linux-desktop` only. The Android targets build on
+  the build host, which does not have the local checkout; run `dk kit pin`
+  first.
+- The phone must be awake or have no PIN. `dk run android-phone` wakes it and
+  lifts the keyguard, which works only without a PIN.
+
 ## Licence
 
 MIT

@@ -16,6 +16,9 @@ const EXCLUDES: &[&str] = &["node_modules", "target", "artifacts", "dist", "apk"
 
 /// Syncs the app to the build host, builds a debug APK for `arch`, and copies it back.
 pub fn build(app: &App, arch: &str) -> Result<PathBuf> {
+    if app.dir.join(".dk/kit-local").exists() {
+        bail!("this app uses a local kit checkout, which is not synced to the build host; run `dk kit pin` first");
+    }
     let a = &app.android;
     let remote_root = format!("{}/work/{}", a.host_root, app.root_name());
     let remote_app = Path::new(&remote_root).join(app.rel_dir());

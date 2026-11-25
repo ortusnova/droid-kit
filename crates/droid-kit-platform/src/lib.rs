@@ -130,10 +130,13 @@ fn engine() -> (&'static str, Option<String>) {
 
 fn init_script() -> String {
     let (name, version) = engine();
+    // Debug builds only: the screen to open first, from `dk run --route`.
+    let start_route = if cfg!(debug_assertions) { std::env::var("DK_START_ROUTE").ok() } else { None };
     let native = serde_json::json!({
         "platform": platform_name(),
         "engine": { "name": name, "version": version },
         "debug": cfg!(debug_assertions),
+        "startRoute": start_route,
     });
     format!("window.__DK_NATIVE__ = {native};")
 }

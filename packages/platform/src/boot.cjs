@@ -6,12 +6,13 @@
  *
  * It checks the engine against the minimums, and otherwise sets, before the
  * first paint:
- *   window.__DK__             { platform, engine, formFactor, theme, themePreference, debug }
+ *   window.__DK__             { platform, engine, formFactor, theme, themePreference, debug, startRoute }
  *   <html data-platform data-form-factor data-theme>
  *   --dk-keyboard             height of the on-screen keyboard over the page
+ * and then starts the app's module scripts, which the Vite plugin made inert.
  *
  * window.__DK_NATIVE__ is set by the droid-kit-platform plugin's init script:
- *   { platform: "android" | "linux" | ..., engine: { name, version }, debug }
+ *   { platform: "android" | "linux" | ..., engine: { name, version }, debug, startRoute }
  * It is absent in a plain browser.
  */
 (function (root, factory) {
@@ -86,7 +87,7 @@
         ? '<p><a href="market://details?id=com.google.android.webview" style="color:#155dfc">Open Android System WebView in the store</a></p>'
         : '<p>Update WebKitGTK with your system\'s package manager.</p>';
     return (
-      '<div style="font-family:sans-serif;padding:32px 24px;max-width:480px;line-height:1.5;color:#09090b;background:#fff">' +
+      '<div style="font-family:sans-serif;padding:32px 24px;padding-top:calc(32px + env(safe-area-inset-top, 0px));max-width:480px;line-height:1.5;color:#09090b;background:#fff">' +
       '<h1 style="font-size:22px;margin:0 0 12px">Please update ' + label + '</h1>' +
       '<p>This app needs ' + label + ' ' + minimumText(engine.name) + ' or newer. This device has version ' + engine.version + '.</p>' +
       action +
@@ -134,7 +135,8 @@
       formFactor: formFactor(platform, coarse, window.screen.width, window.screen.height),
       themePreference: readPreference(window.localStorage),
       theme: 'light',
-      debug: debug
+      debug: debug,
+      startRoute: debug && native && native.startRoute ? native.startRoute : null
     };
     window.__DK__ = dk;
     html.setAttribute('data-platform', platform);
@@ -163,6 +165,24 @@
       if (dark.addEventListener) dark.addEventListener('change', applyTheme);
       else if (dark.addListener) dark.addListener(applyTheme);
     }
+
+    /* The app's module scripts were made inert by the droidKit() Vite plugin;
+     * start them now, in document order, once the document is parsed. */
+    function startApp() {
+      var inert = document.querySelectorAll('script[type="dk/module"]');
+      for (var i = 0; i < inert.length; i++) {
+        var old = inert[i];
+        var script = document.createElement('script');
+        script.type = 'module';
+        script.async = false;
+        if (old.src) script.src = old.src;
+        else script.text = old.text;
+        if (old.crossOrigin !== null) script.crossOrigin = old.crossOrigin;
+        old.parentNode.replaceChild(script, old);
+      }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startApp);
+    else startApp();
 
     /* The keyboard shrinks the visual viewport, not the layout viewport. */
     var vv = window.visualViewport;

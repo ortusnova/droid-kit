@@ -80,7 +80,13 @@ function fakeWindow(ua: string, native: unknown, storage: Record<string, string>
     attrs,
     html,
     window: {
-      document: { documentElement: html },
+      document: {
+        documentElement: html,
+        readyState: 'complete',
+        querySelectorAll: () => [],
+        addEventListener: vi.fn(),
+        createElement: () => ({}),
+      },
       navigator: { userAgent: ua },
       __DK_NATIVE__: native,
       screen: { width: 412, height: 892 },
@@ -124,5 +130,42 @@ describe('boot', () => {
     expect(f.attrs['data-form-factor']).toBe('phone');
     expect(f.attrs['data-theme']).toBe('dark');
     expect(f.window.__DK__).toMatchObject({ platform: 'android', formFactor: 'phone', theme: 'dark', themePreference: 'dark' });
+  });
+
+  it('starts the inert module scripts in document order when the engine is supported', () => {
+    const f = fakeWindow(PHONE_UA, { platform: 'android', engine: { name: 'android-webview', version: null } });
+    const replaced: Array<{ type: string; src: string; async: boolean }> = [];
+    const inert = ['/assets/a.js', '/assets/b.js'].map(src => ({
+      src,
+      text: '',
+      crossOrigin: '',
+      parentNode: { replaceChild: (n: { type: string; src: string; async: boolean }) => replaced.push(n) },
+    }));
+    const doc = f.window.document as Record<string, unknown>;
+    doc.querySelectorAll = () => inert;
+    doc.createElement = () => ({});
+    boot.boot(f.window);
+    expect(replaced.map(r => [r.type, r.src, r.async])).toEqual([
+      ['module', '/assets/a.js', false],
+      ['module', '/assets/b.js', false],
+    ]);
+  });
+
+  it('starts nothing below the minimum', () => {
+    const f = fakeWindow(OLD_PHONE_UA, { platform: 'android', engine: { name: 'android-webview', version: null } });
+    const replaceChild = vi.fn();
+    const doc = f.window.document as Record<string, unknown>;
+    doc.querySelectorAll = () => [{ src: '/assets/a.js', parentNode: { replaceChild } }];
+    boot.boot(f.window);
+    expect(replaceChild).not.toHaveBeenCalled();
+  });
+});
+
+describe('ES5', () => {
+  it('the boot script parses as ECMAScript 5, so old engines can run it', async () => {
+    const { parse } = await import('acorn');
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync(new URL('../src/boot.cjs', import.meta.url), 'utf8');
+    expect(() => parse(source, { ecmaVersion: 5 })).not.toThrow();
   });
 });

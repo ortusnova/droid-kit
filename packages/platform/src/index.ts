@@ -21,6 +21,8 @@ export interface Dk {
   theme: Theme;
   themePreference: ThemePreference;
   debug: boolean;
+  /** Debug builds: the screen to open first, from `dk run --route`. */
+  startRoute: string | null;
   setThemePreference(preference: ThemePreference): void;
 }
 
@@ -81,6 +83,15 @@ function toHex(css: string): string {
   ctx.fillStyle = '#000000';
   ctx.fillStyle = css;
   return String(ctx.fillStyle);
+}
+
+/**
+ * Debug builds: open the screen `dk run --route` asked for, by replacing the
+ * current history entry. Call before the router is created.
+ */
+export function applyStartRoute(): void {
+  const route = window.__DK__?.startRoute;
+  if (route) history.replaceState(null, '', route);
 }
 
 /** Sends the app to the background, as the system back action does on a start screen. */

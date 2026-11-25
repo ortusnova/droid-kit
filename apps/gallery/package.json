@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@droid-kit/platform": "workspace:*",
+    "@tanstack/react-router": "1.170.46",
     "@tauri-apps/api": "2.12.5",
     "react": "19.3.1",
     "react-dom": "19.3.1"

@@ -64,7 +64,7 @@ pub fn build(app: &App) -> Result<()> {
     run(&mut c)
 }
 
-pub fn run_desktop(app: &App, timeout: u64) -> Result<ExitCode> {
+pub fn run_desktop(app: &App, timeout: u64, route: Option<&str>) -> Result<ExitCode> {
     build(app)?;
     let binary = app.root.join("target/alpine/debug").join(&app.binary);
     let runtime = std::env::var("XDG_RUNTIME_DIR").context("XDG_RUNTIME_DIR is not set; is this a desktop session?")?;
@@ -81,8 +81,22 @@ pub fn run_desktop(app: &App, timeout: u64) -> Result<ExitCode> {
     c.args(["-v", &format!("{runtime}/{wayland}:/run/dk/{wayland}")])
         .args(["-v", &format!("{runtime}/bus:/run/dk/bus")])
         .args(["-e", "XDG_RUNTIME_DIR=/run/dk", "-e", &format!("WAYLAND_DISPLAY={wayland}")])
-        .args(["-e", "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/dk/bus", "-e", "GDK_BACKEND=wayland"])
-        .args(["-e", "HOME=/tmp"])
+        .args(["-e", "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/dk/bus"]);
+    // DK_GDK_BACKEND=x11 runs the app under XWayland, so that X11 tools such as
+    // xdotool can send it real pointer input in tests. Wayland is the default.
+    let backend = std::env::var("DK_GDK_BACKEND").unwrap_or_else(|_| "wayland".into());
+    c.args(["-e", &format!("GDK_BACKEND={backend}")]);
+    if backend == "x11" {
+        let display = std::env::var("DISPLAY").context("DK_GDK_BACKEND=x11 needs DISPLAY")?;
+        c.args(["-e", &format!("DISPLAY={display}"), "-v", "/tmp/.X11-unix:/tmp/.X11-unix"]);
+        if let Ok(xauth) = std::env::var("XAUTHORITY") {
+            c.args(["-e", "XAUTHORITY=/run/dk/xauthority", "-v", &format!("{xauth}:/run/dk/xauthority")]);
+        }
+    }
+    if let Some(route) = route {
+        c.args(["-e", &format!("DK_START_ROUTE={route}")]);
+    }
+    c.args(["-e", "HOME=/tmp"])
         .arg(&app.linux.image)
         .arg(&binary);
     output(&mut c)?;

@@ -33,6 +33,9 @@ enum Cmd {
         /// Seconds to wait for the first screen before failing.
         #[arg(long, default_value_t = 90)]
         timeout: u64,
+        /// Debug builds on linux-desktop: open this route first, e.g. /components/demo.
+        #[arg(long)]
+        route: Option<String>,
     },
     /// Check the app (or the kit, when run in the kit's repository).
     Check,
@@ -65,10 +68,11 @@ fn main() -> ExitCode {
         Cmd::Check => check::run(&cli.app),
         Cmd::Kit { cmd: KitCmd::Local { path } } => kit::local(&cli.app, &path),
         Cmd::Kit { cmd: KitCmd::Pin } => kit::pin(&cli.app),
-        Cmd::Run { target, timeout } => config::App::load(&cli.app).and_then(|app| match target {
-            Target::AndroidPhone => android::run_phone(&app, timeout),
-            Target::AndroidEmulator => android::run_emulator(&app),
-            Target::LinuxDesktop => linux::run_desktop(&app, timeout),
+        Cmd::Run { target, timeout, route } => config::App::load(&cli.app).and_then(|app| match (target, route) {
+            (Target::AndroidPhone, None) => android::run_phone(&app, timeout),
+            (Target::AndroidEmulator, None) => android::run_emulator(&app),
+            (Target::LinuxDesktop, route) => linux::run_desktop(&app, timeout, route.as_deref()),
+            (_, Some(_)) => Err(anyhow::anyhow!("--route works with linux-desktop only")),
         }),
     };
     match result {

@@ -1,140 +1,131 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@droid-kit/platform/platform.css';
 import {
-  dk,
-  installBackHandler,
-  onThemeChange,
-  reportErrors,
-  setThemePreference,
-  signalReady,
-  syncSystemBars,
-  type ThemePreference,
-} from '@droid-kit/platform';
+  Link,
+  Outlet,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  useMatches,
+  useNavigate,
+  useRouter,
+  useSearch,
+} from '@tanstack/react-router';
+import { applyStartRoute, installBackHandler, reportErrors, signalReady, syncSystemBars } from '@droid-kit/platform';
+import '@droid-kit/platform/platform.css';
+import { PlatformPage, button } from './platform-page';
 
-declare global {
-  interface Window {
-    __DK_AT_HEAD__?: string;
+type Search = { sheet?: string };
+
+// Tabs are routes; a sub-screen is a nested route; an open sheet is a search
+// parameter. Each is a history entry, so the back action closes the sheet,
+// then leaves the sub-screen, then goes back through the tabs.
+const rootRoute = createRootRoute({
+  validateSearch: (s: Record<string, unknown>): Search => (typeof s.sheet === 'string' ? { sheet: s.sheet } : {}),
+  component: Shell,
+});
+const platformRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: PlatformPage, staticData: { title: 'Platform', tab: true } });
+const componentsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/components', component: ComponentsPage, staticData: { title: 'Components', tab: true } });
+const demoRoute = createRoute({ getParentRoute: () => rootRoute, path: '/components/demo', component: DemoPage, staticData: { title: 'Sub-screen', tab: false } });
+
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    title?: string;
+    tab?: boolean;
+  }
+  interface Register {
+    router: typeof router;
   }
 }
 
-type Facts = Record<string, string>;
+applyStartRoute();
 
-// What the platform gives the page, next to what the boot script decided.
-function readFacts(): Facts {
-  const probe = document.getElementById('inset-probe')!;
-  const cs = getComputedStyle(probe);
-  const vv = window.visualViewport;
-  const d = dk();
-  return {
-    'platform': d.platform,
-    'engine': `${d.engine.name} ${d.engine.version ?? '(unknown version)'}`,
-    'form factor': d.formFactor,
-    'theme (preference)': `${d.theme} (${d.themePreference})`,
-    'html attributes': ['data-platform', 'data-form-factor', 'data-theme'].map(a => document.documentElement.getAttribute(a)).join(' · '),
-    '__DK__ as seen in <head>': window.__DK_AT_HEAD__ ?? 'missing',
-    'safe-area top/right/bottom/left': [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].join(' '),
-    '--dk-keyboard': getComputedStyle(document.documentElement).getPropertyValue('--dk-keyboard') || 'unset',
-    'inner size': `${innerWidth}×${innerHeight}`,
-    'visual viewport': vv ? `${Math.round(vv.width)}×${Math.round(vv.height)} @ ${Math.round(vv.offsetTop)}` : 'none',
-    'screen': `${screen.width}×${screen.height} dpr ${devicePixelRatio}`,
-    'pointer': matchMedia('(pointer: coarse)').matches ? 'coarse' : matchMedia('(pointer: fine)').matches ? 'fine' : 'none',
-    'user agent': navigator.userAgent,
-  };
-}
+const router = createRouter({
+  routeTree: rootRoute.addChildren([platformRoute, componentsRoute, demoRoute]),
+  scrollRestoration: true,
+  // One scroll position per screen, whatever sheet is open over it.
+  getScrollRestorationKey: location => location.pathname,
+});
 
-const button: React.CSSProperties = { minHeight: 44, minWidth: 44, padding: '0 14px', fontSize: 15, marginRight: 8, marginBottom: 8 };
+const TABS = [
+  { to: '/', label: 'Platform' },
+  { to: '/components', label: 'Components' },
+] as const;
 
-function Diagnostics() {
-  const [facts, setFacts] = useState<Facts>({});
-  const [depth, setDepth] = useState(0);
-
+function Shell() {
+  const matches = useMatches();
+  const leaf = matches[matches.length - 1];
+  const isTabRoot = leaf?.staticData.tab ?? true;
+  const r = useRouter();
   useEffect(signalReady, []);
 
-  useEffect(() => {
-    const update = () => setFacts(readFacts());
-    update();
-    addEventListener('resize', update);
-    visualViewport?.addEventListener('resize', update);
-    const offTheme = onThemeChange(update);
-    const onPop = () => setDepth(history.state?.depth ?? 0);
-    addEventListener('popstate', onPop);
-    return () => {
-      removeEventListener('resize', update);
-      visualViewport?.removeEventListener('resize', update);
-      removeEventListener('popstate', onPop);
-      offTheme();
-    };
-  }, []);
-
-  const theme = (p: ThemePreference) => () => setThemePreference(p);
-
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 24, paddingBottom: 'calc(96px + var(--dk-inset-bottom))', fontSize: 14 }}>
-      <div id="inset-probe" style={{ position: 'fixed', visibility: 'hidden', padding: 'var(--dk-inset-top) var(--dk-inset-right) var(--dk-inset-bottom) var(--dk-inset-left)' }} />
-      <h1>droid-kit gallery</h1>
-      <h2>Theme</h2>
-      <div>
-        <button style={button} onClick={theme('system')}>System</button>
-        <button style={button} onClick={theme('light')}>Light</button>
-        <button style={button} onClick={theme('dark')}>Dark</button>
-      </div>
-      <h2>History</h2>
-      <p id="history-depth">depth {depth}</p>
-      <button
-        style={button}
-        onClick={() => {
-          const next = depth + 1;
-          history.pushState({ depth: next }, '');
-          setDepth(next);
-        }}
-      >
-        Push an entry
-      </button>
-      {dk().debug && (
-        <>
-          <h2>Debug</h2>
-          <button
-            style={button}
-            onClick={() => {
-              localStorage.setItem('dk.debug.engineVersion', '103');
-              location.reload();
-            }}
-          >
-            Pretend the engine is version 103
+    <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 14, height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', paddingTop: 'calc(8px + var(--dk-inset-top))', borderBottom: '1px solid #e4e4e7' }}>
+        {!isTabRoot && (
+          <button style={{ ...button, margin: 0 }} aria-label="Back" onClick={() => r.history.back()}>
+            ←
           </button>
-        </>
-      )}
-      <h2>Platform facts</h2>
-      <dl id="facts">
-        {Object.entries(facts).map(([k, v]) => (
-          <div key={k} style={{ marginBottom: 6 }}>
-            <dt style={{ fontWeight: 600 }}>{k}</dt>
-            <dd style={{ margin: 0, wordBreak: 'break-all' }} data-fact={k}>{v}</dd>
-          </div>
+        )}
+        <h1 style={{ fontSize: 20, margin: 0 }} id="screen-title">{leaf?.staticData.title}</h1>
+      </header>
+      <main data-scroll-restoration-id="main" style={{ flex: 1, overflowY: 'auto' }}>
+        <Outlet />
+      </main>
+      <nav
+        id="tab-bar"
+        style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #e4e4e7', paddingBottom: 'var(--dk-inset-bottom)', background: '#155dfc' }}
+      >
+        {TABS.map(t => (
+          <Link key={t.to} to={t.to} style={{ ...button, margin: 0, flex: 1, maxWidth: 160, display: 'grid', placeItems: 'center', color: '#fff' }} activeProps={{ style: { fontWeight: 700, textDecoration: 'underline' } }} activeOptions={{ exact: true, includeSearch: false }}>
+            {t.label}
+          </Link>
         ))}
-      </dl>
-      <input id="kbd-probe" placeholder="Tap to open the keyboard" style={{ fontSize: 16, padding: 8, width: '100%', boxSizing: 'border-box' }} />
-      <InsetBar />
-    </main>
+      </nav>
+      <Sheet />
+    </div>
   );
 }
 
-// A bar fixed to the bottom edge: its background reaches the edge, its buttons
-// stay above the navigation bar or gesture area.
-function InsetBar() {
+function ComponentsPage() {
   return (
-    <nav
-      id="inset-bar"
-      style={{
-        position: 'fixed', left: 0, right: 0, bottom: 'var(--dk-keyboard)', display: 'flex', justifyContent: 'space-around',
-        background: '#155dfc', paddingBottom: 'var(--dk-inset-bottom)', paddingLeft: 'var(--dk-inset-left)', paddingRight: 'var(--dk-inset-right)',
-      }}
-    >
-      {['One', 'Two', 'Three'].map(l => (
-        <button key={l} style={{ ...button, margin: 0, background: '#dbeafe', border: '2px solid #09090b', flex: 1, maxWidth: 120 }}>{l}</button>
+    <div style={{ padding: 24 }}>
+      <p>Components come in task group 5. This tab shows the navigation model.</p>
+      <Link to="/components/demo" id="open-demo" style={{ ...button, display: 'inline-grid', placeItems: 'center' }}>
+        Open a sub-screen
+      </Link>
+      {Array.from({ length: 40 }, (_, i) => (
+        <p key={i}>Row {i + 1}</p>
       ))}
-    </nav>
+    </div>
+  );
+}
+
+function DemoPage() {
+  const navigate = useNavigate();
+  return (
+    <div style={{ padding: 24 }}>
+      <p>A screen below a tab's root. On Linux the back button in the bar above is the only way back.</p>
+      <button id="open-sheet" style={button} onClick={() => navigate({ to: '.', search: { sheet: 'demo' } })}>
+        Open a sheet
+      </button>
+    </div>
+  );
+}
+
+// Stand-in for the kit's bottom sheet (task 5.3): open while ?sheet= is set.
+function Sheet() {
+  const { sheet } = useSearch({ strict: false }) as Search;
+  const r = useRouter();
+  if (!sheet) return null;
+  return (
+    <div role="dialog" aria-label="Demo sheet" id="sheet" style={{ position: 'fixed', inset: 0, background: 'rgb(0 0 0 / 0.4)', display: 'flex', alignItems: 'flex-end' }} onClick={() => r.history.back()}>
+      <div style={{ background: '#fff', color: '#09090b', width: '100%', padding: 24, paddingBottom: 'calc(24px + var(--dk-inset-bottom))', borderRadius: '16px 16px 0 0' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ marginTop: 0 }}>Sheet</h2>
+        <p>The back action closes this first.</p>
+      </div>
+    </div>
   );
 }
 
@@ -144,6 +135,6 @@ void installBackHandler();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Diagnostics />
+    <RouterProvider router={router} />
   </StrictMode>,
 );

@@ -6,6 +6,7 @@ packages:
 # (musl), from the same node_modules, so install native packages for both.
 minimumReleaseAgeExclude:
   - '@types/react@19.3.3'
+  - '@types/node@26.6.10'
 
 supportedArchitectures:
   os: [linux]

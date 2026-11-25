@@ -1,12 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { droidKit } from '@droid-kit/platform/vite';
 
 // Tauri serves the dev server to the device, so listen on all interfaces when
 // TAURI_DEV_HOST is set (Android) and on localhost otherwise.
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [droidKit(), react()],
   clearScreen: false,
   server: {
     port: 5310,

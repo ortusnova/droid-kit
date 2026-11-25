@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>droid-kit gallery</title>
+    <script>
+      // Proves the boot script ran before anything else in <head>: keep a copy of what it found.
+      window.__DK_AT_HEAD__ = JSON.stringify(window.__DK__ || null);
+    </script>
+    <style>
+      html { --dk-system-bars: #ffffff; background: #ffffff; color: #09090b; }
+      html[data-theme='dark'] { --dk-system-bars: #09090b; background: #09090b; color: #fafafa; }
+      body { margin: 0; padding: var(--dk-inset-top) var(--dk-inset-right) 0 var(--dk-inset-left); }
+    </style>
   </head>
   <body>
     <div id="root"></div>

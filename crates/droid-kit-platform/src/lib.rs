@@ -1,9 +1,42 @@
-//! Tauri plugin: form factor, insets, theme, system bars and engine version.
+//! Tauri plugin: platform facts for the boot script, Android system bars, and
+//! the back action's "send to background".
+//!
+//! Its init script sets `window.__DK_NATIVE__` before any page script runs:
+//! the platform, the web engine and its version where the user agent does not
+//! carry it (WebKitGTK), and whether this is a debug build.
 
+use serde::Deserialize;
 use tauri::{
-    Runtime,
+    Manager, Runtime,
     plugin::{Builder, TauriPlugin},
 };
+
+#[cfg(target_os = "android")]
+const PLUGIN_IDENTIFIER: &str = "com.ortusnova.droidkit.platform";
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[cfg(target_os = "android")]
+    #[error(transparent)]
+    PluginInvoke(#[from] tauri::plugin::mobile::PluginInvokeError),
+    #[error(transparent)]
+    Tauri(#[from] tauri::Error),
+}
+
+impl serde::Serialize for Error {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.to_string())
+    }
+}
+
+type CmdResult<T> = std::result::Result<T, Error>;
+
+struct Platform<R: Runtime> {
+    #[cfg(target_os = "android")]
+    handle: tauri::plugin::PluginHandle<R>,
+    #[cfg(not(target_os = "android"))]
+    _marker: std::marker::PhantomData<fn() -> R>,
+}
 
 /// Called by the page once its first screen has rendered. `dk run` waits for
 /// this line on the app's standard error (Linux). On Android the page also
@@ -19,8 +52,103 @@ fn report_error(message: String) {
     eprintln!("DK_ERROR {message}");
 }
 
+#[derive(Debug, Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SystemBars {
+    /// Whether the page is dark, so the bar icons must be light.
+    dark: bool,
+    /// The page background, `#rrggbb`, painted behind the web view.
+    background: Option<String>,
+    /// The app's theme choice: `light`, `dark` or `system`.
+    preference: Option<String>,
+}
+
+#[tauri::command]
+fn set_system_bars<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    dark: bool,
+    background: Option<String>,
+    preference: Option<String>,
+) -> CmdResult<()> {
+    let _bars = SystemBars { dark, background, preference };
+    #[cfg(target_os = "android")]
+    app.state::<Platform<R>>().handle.run_mobile_plugin::<()>("setSystemBars", _bars)?;
+    #[cfg(not(target_os = "android"))]
+    let _ = app.state::<Platform<R>>();
+    Ok(())
+}
+
+#[tauri::command]
+fn move_to_background<R: Runtime>(app: tauri::AppHandle<R>) -> CmdResult<()> {
+    #[cfg(target_os = "android")]
+    app.state::<Platform<R>>().handle.run_mobile_plugin::<()>("moveToBackground", ())?;
+    #[cfg(not(target_os = "android"))]
+    let _ = app.state::<Platform<R>>();
+    Ok(())
+}
+
+fn platform_name() -> &'static str {
+    if cfg!(target_os = "android") {
+        "android"
+    } else if cfg!(target_os = "ios") {
+        "ios"
+    } else if cfg!(target_os = "linux") {
+        "linux"
+    } else if cfg!(target_os = "macos") {
+        "macos"
+    } else if cfg!(target_os = "windows") {
+        "windows"
+    } else {
+        "unknown"
+    }
+}
+
+/// The web engine and, where the user agent does not tell, its version.
+fn engine() -> (&'static str, Option<String>) {
+    #[cfg(target_os = "linux")]
+    {
+        // SAFETY: these WebKitGTK functions only return compile-time constants of the loaded library.
+        let (major, minor, micro) = unsafe {
+            (
+                webkit2gtk_sys::webkit_get_major_version(),
+                webkit2gtk_sys::webkit_get_minor_version(),
+                webkit2gtk_sys::webkit_get_micro_version(),
+            )
+        };
+        ("webkitgtk", Some(format!("{major}.{minor}.{micro}")))
+    }
+    #[cfg(target_os = "android")]
+    {
+        // The reduced user agent still carries the WebView's major version.
+        ("android-webview", None)
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    {
+        ("unknown", None)
+    }
+}
+
+fn init_script() -> String {
+    let (name, version) = engine();
+    let native = serde_json::json!({
+        "platform": platform_name(),
+        "engine": { "name": name, "version": version },
+        "debug": cfg!(debug_assertions),
+    });
+    format!("window.__DK_NATIVE__ = {native};")
+}
+
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("droid-kit-platform")
-        .invoke_handler(tauri::generate_handler![ready, report_error])
+        .js_init_script(init_script())
+        .invoke_handler(tauri::generate_handler![ready, report_error, set_system_bars, move_to_background])
+        .setup(|app, _api| {
+            #[cfg(target_os = "android")]
+            let platform = Platform { handle: _api.register_android_plugin(PLUGIN_IDENTIFIER, "PlatformPlugin")? };
+            #[cfg(not(target_os = "android"))]
+            let platform = Platform::<R> { _marker: std::marker::PhantomData };
+            app.manage(platform);
+            Ok(())
+        })
         .build()
 }

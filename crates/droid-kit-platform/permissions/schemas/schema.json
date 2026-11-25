@@ -295,6 +295,18 @@
       "type": "string",
       "oneOf": [
         {
+          "description": "Enables the move_to_background command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-move-to-background",
+          "markdownDescription": "Enables the move_to_background command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the move_to_background command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-move-to-background",
+          "markdownDescription": "Denies the move_to_background command without any pre-configured scope."
+        },
+        {
           "description": "Enables the ready command without any pre-configured scope.",
           "type": "string",
           "const": "allow-ready",
@@ -319,10 +331,22 @@
           "markdownDescription": "Denies the report_error command without any pre-configured scope."
         },
         {
-          "description": "Everything the droid-kit platform layer needs\n#### This default permission set includes:\n\n- `allow-ready`\n- `allow-report-error`",
+          "description": "Enables the set_system_bars command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-system-bars",
+          "markdownDescription": "Enables the set_system_bars command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_system_bars command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-system-bars",
+          "markdownDescription": "Denies the set_system_bars command without any pre-configured scope."
+        },
+        {
+          "description": "Everything the droid-kit platform layer needs\n#### This default permission set includes:\n\n- `allow-ready`\n- `allow-report-error`\n- `allow-set-system-bars`\n- `allow-move-to-background`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Everything the droid-kit platform layer needs\n#### This default permission set includes:\n\n- `allow-ready`\n- `allow-report-error`"
+          "markdownDescription": "Everything the droid-kit platform layer needs\n#### This default permission set includes:\n\n- `allow-ready`\n- `allow-report-error`\n- `allow-set-system-bars`\n- `allow-move-to-background`"
         }
       ]
     }

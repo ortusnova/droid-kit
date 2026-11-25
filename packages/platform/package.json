@@ -5,15 +5,30 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./vite": {
+      "types": "./src/vite.d.ts",
+      "default": "./src/vite.js"
+    },
+    "./platform.css": "./src/platform.css"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
   },
   "peerDependencies": {
-    "@tauri-apps/api": "^2.12.5"
+    "@tauri-apps/api": "^2.12.5",
+    "vite": "^8.3.8"
   },
   "devDependencies": {
-    "@tauri-apps/api": "2.12.5"
+    "@tauri-apps/api": "2.12.5",
+    "@types/node": "26.6.10",
+    "vite": "8.3.8",
+    "vitest": "5.1.2"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

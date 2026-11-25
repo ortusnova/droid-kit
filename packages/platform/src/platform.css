@@ -1,0 +1,15 @@
+/* The one place insets come from. Components use these variables and never
+ * read env(safe-area-inset-*) directly.
+ *
+ * Android WebView (140+) reports the status bar, the navigation bar or gesture
+ * area and display cutouts through env() in Tauri's edge-to-edge window. While
+ * the on-screen keyboard is open, the bottom inset drops to 0 and the boot
+ * script sets --dk-keyboard to the height the keyboard covers.
+ */
+:root {
+  --dk-inset-top: env(safe-area-inset-top, 0px);
+  --dk-inset-right: env(safe-area-inset-right, 0px);
+  --dk-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --dk-inset-left: env(safe-area-inset-left, 0px);
+  --dk-keyboard: 0px;
+}

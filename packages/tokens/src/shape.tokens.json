@@ -1,0 +1,62 @@
+{
+  "$description": "Shape. daisyUI 5.8.2's default theme values (theme/light.css), until Brian chooses on the token options page.",
+  "radius": {
+    "$type": "dimension",
+    "selector": {
+      "$value": {
+        "value": 0.5,
+        "unit": "rem"
+      },
+      "$description": "Checkboxes, toggles, badges: daisyUI --radius-selector."
+    },
+    "field": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      },
+      "$description": "Buttons, inputs, selects, tabs: daisyUI --radius-field."
+    },
+    "box": {
+      "$value": {
+        "value": 0.5,
+        "unit": "rem"
+      },
+      "$description": "Cards, sheets, dialogs, alerts: daisyUI --radius-box."
+    }
+  },
+  "size": {
+    "$type": "dimension",
+    "selector": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      },
+      "$description": "Base size of checkboxes and toggles: daisyUI --size-selector (× 6)."
+    },
+    "field": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      },
+      "$description": "Base size of buttons and inputs: daisyUI --size-field (× 10)."
+    }
+  },
+  "border-width": {
+    "$type": "dimension",
+    "$value": {
+      "value": 1,
+      "unit": "px"
+    },
+    "$description": "daisyUI --border."
+  },
+  "depth": {
+    "$type": "number",
+    "$value": 1,
+    "$description": "daisyUI --depth: 1 adds subtle shadows and gradients to controls, 0 removes them."
+  },
+  "noise": {
+    "$type": "number",
+    "$value": 0,
+    "$description": "daisyUI --noise: 1 adds a grain texture."
+  }
+}

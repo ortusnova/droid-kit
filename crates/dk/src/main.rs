@@ -7,6 +7,7 @@ mod doctor;
 mod kit;
 mod linux;
 mod proc;
+mod tokens;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -39,6 +40,11 @@ enum Cmd {
     },
     /// Check the app (or the kit, when run in the kit's repository).
     Check,
+    /// Design tokens (run in the kit's repository).
+    Tokens {
+        #[command(subcommand)]
+        cmd: TokensCmd,
+    },
     /// Switch between the pinned kit tag and a local kit checkout.
     Kit {
         #[command(subcommand)]
@@ -52,6 +58,16 @@ enum KitCmd {
     Local { path: PathBuf },
     /// Go back to the pinned tag, restoring the dependency files exactly.
     Pin,
+}
+
+#[derive(Subcommand)]
+enum TokensCmd {
+    /// Write the choices made on the gallery's Design page into the token source.
+    Apply {
+        /// A choices file; by default it is fetched from the gallery on the Android phone.
+        #[arg(long)]
+        file: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -68,6 +84,7 @@ fn main() -> ExitCode {
         Cmd::Check => check::run(&cli.app),
         Cmd::Kit { cmd: KitCmd::Local { path } } => kit::local(&cli.app, &path),
         Cmd::Kit { cmd: KitCmd::Pin } => kit::pin(&cli.app),
+        Cmd::Tokens { cmd: TokensCmd::Apply { file } } => tokens::apply(&cli.app, file.as_deref()),
         Cmd::Run { target, timeout, route } => config::App::load(&cli.app).and_then(|app| match (target, route) {
             (Target::AndroidPhone, None) => android::run_phone(&app, timeout),
             (Target::AndroidEmulator, None) => android::run_emulator(&app),

@@ -1,0 +1,50 @@
+{
+  "motion": {
+    "$description": "Motion.",
+    "duration": {
+      "$type": "duration",
+      "fast": {
+        "$value": {
+          "value": 150,
+          "unit": "ms"
+        },
+        "$description": "Presses, toggles."
+      },
+      "base": {
+        "$value": {
+          "value": 200,
+          "unit": "ms"
+        },
+        "$description": "Most transitions (daisyUI uses 0.2 s)."
+      },
+      "slow": {
+        "$value": {
+          "value": 300,
+          "unit": "ms"
+        },
+        "$description": "Sheets and dialogs entering."
+      }
+    },
+    "easing": {
+      "$type": "cubicBezier",
+      "standard": {
+        "$value": [
+          0.4,
+          0,
+          0.2,
+          1
+        ],
+        "$description": "Tailwind ease-in-out."
+      },
+      "out": {
+        "$value": [
+          0,
+          0,
+          0.2,
+          1
+        ],
+        "$description": "Elements entering."
+      }
+    }
+  }
+}

@@ -63,7 +63,31 @@ pub fn tag_problems(deps: &[KitDep]) -> Vec<String> {
     vec![format!("kit dependencies name {} different tags; they must all name one:\n{list}", tags.len())]
 }
 
+/// The kit's own checks, when `dk check` runs in the kit's repository.
+fn kit_checks(root: &Path) -> Result<bool> {
+    eprintln!("kit: design tokens");
+    let status = std::process::Command::new("node")
+        .arg("packages/tokens/scripts/generate.ts")
+        .arg("--check")
+        .current_dir(root)
+        .status()
+        .context("running the token generator (is node on PATH?)")?;
+    Ok(status.success())
+}
+
+pub fn kit_root(dir: &Path) -> Option<std::path::PathBuf> {
+    let dir = dir.canonicalize().ok()?;
+    dir.ancestors()
+        .find(|d| d.join("crates/dk/Cargo.toml").is_file() && d.join("packages/tokens/scripts/generate.ts").is_file())
+        .map(Path::to_path_buf)
+}
+
 pub fn run(dir: &Path) -> Result<ExitCode> {
+    if let Some(root) = kit_root(dir) {
+        if dir.canonicalize()? == root {
+            return Ok(if kit_checks(&root)? { ExitCode::SUCCESS } else { ExitCode::FAILURE });
+        }
+    }
     let mut problems = Vec::new();
     let mut deps = Vec::new();
     if let Ok(s) = fs::read_to_string(dir.join("package.json")) {

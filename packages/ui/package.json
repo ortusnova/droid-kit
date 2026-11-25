@@ -5,9 +5,28 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./kit.css": "./src/kit.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "daisyui": "5.8.2",
+    "tailwindcss": "4.3.5"
+  },
+  "peerDependencies": {
+    "@droid-kit/platform": "*",
+    "@droid-kit/tokens": "*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@droid-kit/platform": "workspace:*",
+    "@droid-kit/tokens": "workspace:*",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }

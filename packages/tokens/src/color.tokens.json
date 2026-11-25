@@ -1,0 +1,481 @@
+{
+  "$type": "color",
+  "$description": "Colour roles. $value is the light mode; the dark mode is in $extensions[\"com.ortusnova.droidkit\"].dark. Source: Tailwind CSS 4 blue and zinc scales, the Blue · Zinc scheme from design/matrix (tw-blue-zinc).",
+  "color": {
+    "background": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "hex": "#ffffff"
+      },
+      "$description": "Page background, behind every surface. Also the Android window, launch screen and system bars.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0353,
+              0.0353,
+              0.0431
+            ],
+            "hex": "#09090b"
+          }
+        }
+      }
+    },
+    "surface": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9804,
+          0.9804,
+          0.9804
+        ],
+        "hex": "#fafafa"
+      },
+      "$description": "Cards, bars and lists: daisyUI base-100.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0941,
+              0.0941,
+              0.1059
+            ],
+            "hex": "#18181b"
+          }
+        }
+      }
+    },
+    "surface-sunken": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9569,
+          0.9569,
+          0.9608
+        ],
+        "hex": "#f4f4f5"
+      },
+      "$description": "Tracks and fields set into a surface: daisyUI base-200. Darker than the surface in both modes, so a selected segment (surface) stands out from its track.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0667,
+              0.0667,
+              0.0745
+            ],
+            "hex": "#111113"
+          }
+        }
+      }
+    },
+    "surface-raised": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "hex": "#ffffff"
+      },
+      "$description": "Sheets, dialogs and popovers that sit above a surface.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1529,
+              0.1529,
+              0.1647
+            ],
+            "hex": "#27272a"
+          }
+        }
+      }
+    },
+    "border": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8941,
+          0.8941,
+          0.9059
+        ],
+        "hex": "#e4e4e7"
+      },
+      "$description": "Decorative divider lines between rows and cards: daisyUI base-300. Exempt from the 3:1 rule.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.2471,
+              0.2471,
+              0.2745
+            ],
+            "hex": "#3f3f46"
+          }
+        }
+      }
+    },
+    "control-border": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.4431,
+          0.4431,
+          0.4824
+        ],
+        "hex": "#71717b"
+      },
+      "$description": "Edges a user needs to see a control, such as text field borders. At least 3:1 against surface, sunken and raised.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.4431,
+              0.4431,
+              0.4824
+            ],
+            "hex": "#71717b"
+          }
+        }
+      }
+    },
+    "text": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0353,
+          0.0353,
+          0.0431
+        ],
+        "hex": "#09090b"
+      },
+      "$description": "Primary text.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.9804,
+              0.9804,
+              0.9804
+            ],
+            "hex": "#fafafa"
+          }
+        }
+      }
+    },
+    "text-muted": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.4431,
+          0.4431,
+          0.4824
+        ],
+        "hex": "#71717b"
+      },
+      "$description": "Secondary text: cues, captions, placeholders on the page and on surfaces.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.6235,
+              0.6235,
+              0.6627
+            ],
+            "hex": "#9f9fa9"
+          }
+        }
+      }
+    },
+    "accent": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0824,
+          0.3647,
+          0.9882
+        ],
+        "hex": "#155dfc"
+      },
+      "$description": "The brand colour as a fill: primary buttons, selected checkboxes and segments, focus rings. Tailwind blue-600 light, blue-500 dark. At least 3:1 against surfaces as a non-text indicator; for accent-coloured text use accent-text.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1686,
+              0.498,
+              1.0
+            ],
+            "hex": "#2b7fff"
+          }
+        }
+      }
+    },
+    "on-accent": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "hex": "#ffffff"
+      },
+      "$description": "Text and icons on the accent. Dark mode is an open choice (black here, or white on a deeper accent).",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "hex": "#000000"
+          }
+        }
+      }
+    },
+    "accent-text": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0824,
+          0.3647,
+          0.9882
+        ],
+        "hex": "#155dfc"
+      },
+      "$description": "Accent-coloured text and icons on the page and surfaces: links, active labels. Kept separate from the accent fill so the fill can be deeper in dark mode without failing as text.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.1686,
+              0.498,
+              1.0
+            ],
+            "hex": "#2b7fff"
+          }
+        }
+      }
+    },
+    "accent-soft": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.8588,
+          0.9176,
+          0.9961
+        ],
+        "hex": "#dbeafe"
+      },
+      "$description": "Tinted backgrounds: chips, streak badges, selected rows.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0824,
+              0.1529,
+              0.2706
+            ],
+            "hex": "#152745"
+          }
+        }
+      }
+    },
+    "on-accent-soft": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.098,
+          0.2353,
+          0.7216
+        ],
+        "hex": "#193cb8"
+      },
+      "$description": "Text on the soft accent.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.7451,
+              0.8588,
+              1.0
+            ],
+            "hex": "#bedbff"
+          }
+        }
+      }
+    },
+    "success": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0,
+          0.6,
+          0.4
+        ],
+        "hex": "#009966"
+      },
+      "$description": "Done, success.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0,
+              0.7373,
+              0.4902
+            ],
+            "hex": "#00bc7d"
+          }
+        }
+      }
+    },
+    "on-success": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0353,
+          0.0353,
+          0.0431
+        ],
+        "hex": "#09090b"
+      },
+      "$description": "Text on success.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0353,
+              0.0353,
+              0.0431
+            ],
+            "hex": "#09090b"
+          }
+        }
+      }
+    },
+    "warning": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9961,
+          0.6039,
+          0.0
+        ],
+        "hex": "#fe9a00"
+      },
+      "$description": "Attention: never-miss-twice, restart.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              1.0,
+              0.7255,
+              0.0
+            ],
+            "hex": "#ffb900"
+          }
+        }
+      }
+    },
+    "on-warning": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.0353,
+          0.0353,
+          0.0431
+        ],
+        "hex": "#09090b"
+      },
+      "$description": "Text on warning.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0353,
+              0.0353,
+              0.0431
+            ],
+            "hex": "#09090b"
+          }
+        }
+      }
+    },
+    "danger": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0.9059,
+          0.0,
+          0.0431
+        ],
+        "hex": "#e7000b"
+      },
+      "$description": "Missed, destructive actions, errors.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.9843,
+              0.1725,
+              0.2118
+            ],
+            "hex": "#fb2c36"
+          }
+        }
+      }
+    },
+    "on-danger": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "hex": "#ffffff"
+      },
+      "$description": "Text on danger.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0.0353,
+              0.0353,
+              0.0431
+            ],
+            "hex": "#09090b"
+          }
+        }
+      }
+    }
+  }
+}

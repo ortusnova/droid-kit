@@ -13,8 +13,9 @@ import {
   useSearch,
 } from '@tanstack/react-router';
 import { applyStartRoute, installBackHandler, reportErrors, signalReady, syncSystemBars } from '@droid-kit/platform';
-import '@droid-kit/platform/platform.css';
+import './app.css';
 import { PlatformPage, button } from './platform-page';
+import { DesignPage } from './design-page';
 
 type Search = { sheet?: string };
 
@@ -27,6 +28,7 @@ const rootRoute = createRootRoute({
 });
 const platformRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: PlatformPage, staticData: { title: 'Platform', tab: true } });
 const componentsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/components', component: ComponentsPage, staticData: { title: 'Components', tab: true } });
+const designRoute = createRoute({ getParentRoute: () => rootRoute, path: '/design', component: DesignPage, staticData: { title: 'Design', tab: true } });
 const demoRoute = createRoute({ getParentRoute: () => rootRoute, path: '/components/demo', component: DemoPage, staticData: { title: 'Sub-screen', tab: false } });
 
 declare module '@tanstack/react-router' {
@@ -42,7 +44,7 @@ declare module '@tanstack/react-router' {
 applyStartRoute();
 
 const router = createRouter({
-  routeTree: rootRoute.addChildren([platformRoute, componentsRoute, demoRoute]),
+  routeTree: rootRoute.addChildren([platformRoute, designRoute, componentsRoute, demoRoute]),
   scrollRestoration: true,
   // One scroll position per screen, whatever sheet is open over it.
   getScrollRestorationKey: location => location.pathname,
@@ -50,6 +52,7 @@ const router = createRouter({
 
 const TABS = [
   { to: '/', label: 'Platform' },
+  { to: '/design', label: 'Design' },
   { to: '/components', label: 'Components' },
 ] as const;
 
@@ -62,7 +65,7 @@ function Shell() {
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 14, height: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', paddingTop: 'calc(8px + var(--dk-inset-top))', borderBottom: '1px solid #e4e4e7' }}>
+      <header className="bg-base-100 border-divider border-b" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', paddingTop: 'calc(8px + var(--dk-inset-top))' }}>
         {!isTabRoot && (
           <button style={{ ...button, margin: 0 }} aria-label="Back" onClick={() => r.history.back()}>
             ←
@@ -75,10 +78,11 @@ function Shell() {
       </main>
       <nav
         id="tab-bar"
-        style={{ display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #e4e4e7', paddingBottom: 'var(--dk-inset-bottom)', background: '#155dfc' }}
+        className="bg-primary"
+        style={{ display: 'flex', justifyContent: 'space-around', paddingBottom: 'var(--dk-inset-bottom)' }}
       >
         {TABS.map(t => (
-          <Link key={t.to} to={t.to} style={{ ...button, margin: 0, flex: 1, maxWidth: 160, display: 'grid', placeItems: 'center', color: '#fff' }} activeProps={{ style: { fontWeight: 700, textDecoration: 'underline' } }} activeOptions={{ exact: true, includeSearch: false }}>
+          <Link key={t.to} to={t.to} className="text-primary-content" style={{ ...button, margin: 0, flex: 1, maxWidth: 160, display: 'grid', placeItems: 'center' }} activeProps={{ style: { fontWeight: 700, textDecoration: 'underline' } }} activeOptions={{ exact: true, includeSearch: false }}>
             {t.label}
           </Link>
         ))}
@@ -121,7 +125,7 @@ function Sheet() {
   if (!sheet) return null;
   return (
     <div role="dialog" aria-label="Demo sheet" id="sheet" style={{ position: 'fixed', inset: 0, background: 'rgb(0 0 0 / 0.4)', display: 'flex', alignItems: 'flex-end' }} onClick={() => r.history.back()}>
-      <div style={{ background: '#fff', color: '#09090b', width: '100%', padding: 24, paddingBottom: 'calc(24px + var(--dk-inset-bottom))', borderRadius: '16px 16px 0 0' }} onClick={e => e.stopPropagation()}>
+      <div className="bg-raised" style={{ width: '100%', padding: 24, paddingBottom: 'calc(24px + var(--dk-inset-bottom))', borderRadius: '16px 16px 0 0' }} onClick={e => e.stopPropagation()}>
         <h2 style={{ marginTop: 0 }}>Sheet</h2>
         <p>The back action closes this first.</p>
       </div>

@@ -4,7 +4,7 @@ dist/
 artifacts/
 *.log
 .DS_Store
-apps/*/src-tauri/gen/
+apps/*/src-tauri/gen/schemas/
 apps/*/src-tauri/target/
 dk.local.toml
 .dk/

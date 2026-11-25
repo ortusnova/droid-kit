@@ -5,9 +5,21 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./generated/tokens.ts",
+    "./theme.css": "./generated/theme.css",
+    "./android/*": "./generated/android/*",
+    "./options.json": "./options.json"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p ."
+    "generate": "node scripts/generate.ts",
+    "check": "node scripts/generate.ts --check",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.10",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "vitest": "5.1.2"
   }
 }

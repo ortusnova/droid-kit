@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- The window behind the page takes the page background from the design
+         tokens (@color/dk_background, from the droid-kit-platform library, with
+         a night variant), so no other colour shows before the page paints. -->
+    <style name="Theme.gallery" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/dk_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

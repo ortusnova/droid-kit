@@ -1,0 +1,64 @@
+{
+  "font": {
+    "$description": "Type.",
+    "family": {
+      "$type": "fontFamily",
+      "sans": {
+        "$value": [
+          "system-ui",
+          "Roboto",
+          "Noto Sans",
+          "Cantarell",
+          "sans-serif"
+        ],
+        "$description": "The platform's own UI font: Roboto on Android, Noto Sans or Cantarell on Linux phones."
+      }
+    },
+    "size": {
+      "$type": "dimension",
+      "$description": "Type scale (Tailwind 4 defaults).",
+      "caption": {
+        "$value": {
+          "value": 0.75,
+          "unit": "rem"
+        }
+      },
+      "small": {
+        "$value": {
+          "value": 0.875,
+          "unit": "rem"
+        }
+      },
+      "body": {
+        "$value": {
+          "value": 1,
+          "unit": "rem"
+        }
+      },
+      "title": {
+        "$value": {
+          "value": 1.25,
+          "unit": "rem"
+        }
+      },
+      "headline": {
+        "$value": {
+          "value": 1.5,
+          "unit": "rem"
+        }
+      }
+    },
+    "weight": {
+      "$type": "fontWeight",
+      "regular": {
+        "$value": 400
+      },
+      "medium": {
+        "$value": 500
+      },
+      "bold": {
+        "$value": 700
+      }
+    }
+  }
+}

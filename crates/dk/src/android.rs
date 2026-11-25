@@ -12,7 +12,23 @@ use crate::config::{App, stamp};
 use crate::proc::{self, output, run, sleep, succeeds};
 
 /// Paths never sent to the build host: host-specific installs and outputs.
-const EXCLUDES: &[&str] = &["node_modules", "target", "artifacts", "dist", "apk", ".dk", "src-tauri/gen", "dk.local.toml"];
+/// The Android project in src-tauri/gen/android is synced (apps commit it), but
+/// not its build outputs, Gradle state or files Tauri regenerates.
+const EXCLUDES: &[&str] = &[
+    "node_modules",
+    "target",
+    "artifacts",
+    "dist",
+    "apk",
+    ".dk",
+    "dk.local.toml",
+    "src-tauri/gen/schemas",
+    "src-tauri/gen/android/**/build",
+    "src-tauri/gen/android/.gradle",
+    "src-tauri/gen/android/.kotlin",
+    "src-tauri/gen/android/.tauri",
+    "src-tauri/gen/android/local.properties",
+];
 
 /// Syncs the app to the build host, builds a debug APK for `arch`, and copies it back.
 pub fn build(app: &App, arch: &str) -> Result<PathBuf> {

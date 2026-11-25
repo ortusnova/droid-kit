@@ -1,0 +1,56 @@
+{
+  "$comment": "Undecided token values, shown as rendered options on the gallery's Design page (design-tokens spec). Each option lists the token values it would write. Paths are token paths in src/*.tokens.json; a path ending in @dark sets the dark value in $extensions. Apply a choice with: dk tokens apply.",
+  "decisions": [
+    {
+      "id": "radius",
+      "title": "Corner radius",
+      "question": "How round should controls, fields and cards be?",
+      "options": [
+        { "id": "daisyui", "label": "daisyUI default", "tokens": { "radius.selector": { "value": 0.5, "unit": "rem" }, "radius.field": { "value": 0.25, "unit": "rem" }, "radius.box": { "value": 0.5, "unit": "rem" } } },
+        { "id": "soft", "label": "Soft", "tokens": { "radius.selector": { "value": 0.5, "unit": "rem" }, "radius.field": { "value": 0.5, "unit": "rem" }, "radius.box": { "value": 1, "unit": "rem" } } },
+        { "id": "round", "label": "Round", "tokens": { "radius.selector": { "value": 1, "unit": "rem" }, "radius.field": { "value": 1.5, "unit": "rem" }, "radius.box": { "value": 1.5, "unit": "rem" } } },
+        { "id": "sharp", "label": "Sharp", "tokens": { "radius.selector": { "value": 0.125, "unit": "rem" }, "radius.field": { "value": 0.125, "unit": "rem" }, "radius.box": { "value": 0.25, "unit": "rem" } } }
+      ]
+    },
+    {
+      "id": "spacing",
+      "title": "Spacing",
+      "question": "How much room around and between things?",
+      "options": [
+        { "id": "compact", "label": "Compact", "tokens": { "space.unit": { "value": 0.21875, "unit": "rem" } } },
+        { "id": "tailwind", "label": "Tailwind default", "tokens": { "space.unit": { "value": 0.25, "unit": "rem" } } },
+        { "id": "roomy", "label": "Roomy", "tokens": { "space.unit": { "value": 0.28125, "unit": "rem" } } }
+      ]
+    },
+    {
+      "id": "type",
+      "title": "Type size",
+      "question": "How large should text be?",
+      "options": [
+        { "id": "compact", "label": "Compact", "tokens": { "font.size.caption": { "value": 0.6875, "unit": "rem" }, "font.size.small": { "value": 0.8125, "unit": "rem" }, "font.size.body": { "value": 0.9375, "unit": "rem" }, "font.size.title": { "value": 1.125, "unit": "rem" }, "font.size.headline": { "value": 1.375, "unit": "rem" } } },
+        { "id": "tailwind", "label": "Tailwind default", "tokens": { "font.size.caption": { "value": 0.75, "unit": "rem" }, "font.size.small": { "value": 0.875, "unit": "rem" }, "font.size.body": { "value": 1, "unit": "rem" }, "font.size.title": { "value": 1.25, "unit": "rem" }, "font.size.headline": { "value": 1.5, "unit": "rem" } } },
+        { "id": "large", "label": "Large", "tokens": { "font.size.caption": { "value": 0.8125, "unit": "rem" }, "font.size.small": { "value": 0.9375, "unit": "rem" }, "font.size.body": { "value": 1.0625, "unit": "rem" }, "font.size.title": { "value": 1.375, "unit": "rem" }, "font.size.headline": { "value": 1.75, "unit": "rem" } } }
+      ]
+    },
+    {
+      "id": "motion",
+      "title": "Motion",
+      "question": "How quickly should things move? Tap Play on each option.",
+      "options": [
+        { "id": "snappy", "label": "Snappy", "tokens": { "motion.duration.fast": { "value": 100, "unit": "ms" }, "motion.duration.base": { "value": 150, "unit": "ms" }, "motion.duration.slow": { "value": 220, "unit": "ms" } } },
+        { "id": "standard", "label": "Standard", "tokens": { "motion.duration.fast": { "value": 150, "unit": "ms" }, "motion.duration.base": { "value": 200, "unit": "ms" }, "motion.duration.slow": { "value": 300, "unit": "ms" } } },
+        { "id": "gentle", "label": "Gentle", "tokens": { "motion.duration.fast": { "value": 200, "unit": "ms" }, "motion.duration.base": { "value": 300, "unit": "ms" }, "motion.duration.slow": { "value": 450, "unit": "ms" } } }
+      ]
+    },
+    {
+      "id": "dark-accent",
+      "title": "Dark mode: text on the accent",
+      "question": "In dark mode, white text on this blue is too faint (3.8:1). Black text on it, or white text on a deeper blue?",
+      "darkOnly": true,
+      "options": [
+        { "id": "black-on-blue-500", "label": "Black on blue-500", "tokens": { "color.accent@dark": "#2b7fff", "color.on-accent@dark": "#000000" } },
+        { "id": "white-on-blue-600", "label": "White on blue-600", "tokens": { "color.accent@dark": "#155dfc", "color.on-accent@dark": "#ffffff" } }
+      ]
+    }
+  ]
+}

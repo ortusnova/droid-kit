@@ -8,13 +8,8 @@
       // Proves the boot script ran before anything else in <head>: keep a copy of what it found.
       window.__DK_AT_HEAD__ = JSON.stringify(window.__DK__ || null);
     </script>
-    <style>
-      html { --dk-system-bars: #ffffff; background: #ffffff; color: #09090b; }
-      html[data-theme='dark'] { --dk-system-bars: #09090b; background: #09090b; color: #fafafa; }
-      body { margin: 0; }
-    </style>
   </head>
-  <body>
+  <body class="bg-background text-base-content">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

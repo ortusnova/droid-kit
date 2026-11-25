@@ -1,0 +1,28 @@
+/* droid-kit stylesheet: Tailwind CSS 4, daisyUI 5 with the kit's generated
+ * themes, and the platform inset variables. An app imports this once and adds
+ * its own sources:
+ *
+ *   @import "@droid-kit/ui/kit.css";
+ *   @source "./";
+ */
+@import "tailwindcss" source(none);
+@source "./";
+
+/* No built-in daisyUI themes: the only themes are "light" and "dark",
+   generated from the design tokens. */
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
+@import "@droid-kit/tokens/theme.css";
+@import "@droid-kit/platform/platform.css";
+
+@layer base {
+  html {
+    background: var(--color-background);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: var(--font-sans);
+  }
+}

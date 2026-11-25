@@ -11,17 +11,21 @@
   },
   "dependencies": {
     "@droid-kit/platform": "workspace:*",
+    "@droid-kit/tokens": "workspace:*",
+    "@droid-kit/ui": "workspace:*",
     "@tanstack/react-router": "1.170.46",
     "@tauri-apps/api": "2.12.5",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "4.3.5",
     "@tauri-apps/cli": "2.12.6",
     "@types/node": "26.6.10",
     "@types/react": "19.3.3",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
+    "tailwindcss": "4.3.5",
     "typescript": "7.0.2",
     "vite": "8.3.8"
   }

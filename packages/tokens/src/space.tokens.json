@@ -1,0 +1,20 @@
+{
+  "space": {
+    "$type": "dimension",
+    "$description": "Spacing. Tailwind's spacing unit: every spacing utility is a multiple of it.",
+    "unit": {
+      "$value": {
+        "value": 0.25,
+        "unit": "rem"
+      },
+      "$description": "Tailwind --spacing: p-4 = 4 × unit."
+    },
+    "touch-target": {
+      "$value": {
+        "value": 44,
+        "unit": "px"
+      },
+      "$description": "Minimum touch target in both dimensions for every interactive element (ui-components spec). Utilities: size-touch, min-h-touch, min-w-touch."
+    }
+  }
+}

@@ -23,6 +23,7 @@ export const commands = {
 	/**
 	 *  The id of the reminder whose notification opened the app, once. Call at
 	 *  start-up: a tap that starts the app arrives before the page can listen.
+	 *  `async`, because on Android it asks Kotlin (see the note in droid-kit-platform).
 	 */
 	takeOpened: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("plugin:droid-kit-reminders|take_opened", undefined, options),
 	/**

@@ -115,11 +115,15 @@ async fn open_settings<R: Runtime>(app: AppHandle<R>) -> Result<(), ReminderErro
 
 /// The id of the reminder whose notification opened the app, once. Call at
 /// start-up: a tap that starts the app arrives before the page can listen.
+/// `async`, because on Android it asks Kotlin (see the note in droid-kit-platform).
 #[tauri::command]
 #[specta::specta]
-fn take_opened<R: Runtime>(app: AppHandle<R>, opened: tauri::State<'_, Opened>) -> Option<String> {
-    let recorded = opened.0.lock().ok().and_then(|mut slot| slot.take());
-    recorded.or_else(|| platform::pending_opened(&app))
+async fn take_opened<R: Runtime>(app: AppHandle<R>) -> Option<String> {
+    let recorded = app.state::<Opened>().0.lock().ok().and_then(|mut slot| slot.take());
+    match recorded {
+        Some(id) => Some(id),
+        None => platform::pending_opened(&app).await,
+    }
 }
 
 #[cfg(target_os = "android")]

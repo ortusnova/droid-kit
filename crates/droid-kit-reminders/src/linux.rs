@@ -139,7 +139,7 @@ fn launch_argument(args: impl IntoIterator<Item = String>) -> Option<String> {
 }
 
 /// The reminder whose notification started the app (`--dk-reminder <id>`), once.
-pub fn pending_opened<R: Runtime>(_app: &AppHandle<R>) -> Option<String> {
+pub async fn pending_opened<R: Runtime>(_app: &AppHandle<R>) -> Option<String> {
     let id = LAUNCH_ID.get_or_init(|| launch_argument(std::env::args().skip(1))).clone()?;
     (!LAUNCH_ID_TAKEN.swap(true, Ordering::SeqCst)).then_some(id)
 }

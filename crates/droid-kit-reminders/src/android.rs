@@ -71,8 +71,8 @@ struct Tapped {
 
 /// The reminder whose notification started the app, once (cold start). Taps
 /// while the app runs arrive as the Kotlin plugin's `tapped` event.
-pub fn pending_opened<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
-    kotlin(app).ok()?.0.run_mobile_plugin::<Tapped>("takeTapped", ()).ok()?.id
+pub async fn pending_opened<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
+    kotlin(app).ok()?.0.run_mobile_plugin_async::<Tapped>("takeTapped", ()).await.ok()?.id
 }
 
 pub fn capabilities<R: Runtime>(_app: &AppHandle<R>) -> Capabilities {

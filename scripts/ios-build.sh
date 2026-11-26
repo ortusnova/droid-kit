@@ -151,6 +151,66 @@ struct Entry {
 EOF
 # The home-screen name is the product name, as Android's launcher label is.
 xml() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' <<<"$1"; }
+
+# The app icon. xtool's iconPath puts one loose icon.png in the bundle and
+# names it in CFBundleIconFile, which the home screen uses but the system's
+# other places do not (a notification banner showed a blank placeholder). What
+# iOS looks up for an app without an asset catalog is CFBundleIcons with
+# CFBundlePrimaryIcon and CFBundleIconFiles, and files named
+# <name><size>x<size>@<scale>x.png at the bundle's root. So the icon is made in
+# each size iOS asks for, with ImageMagick. iOS draws its own rounded corners
+# and does not take transparency, so the rounded square's transparent border is
+# trimmed and the corners are filled with the icon's own edge colour.
+ICON=$APP/src-tauri/icons/icon.png
+ICONS=$OUT/icons
+rm -rf "$ICONS" && mkdir -p "$ICONS"
+MAGICK=$(command -v magick || command -v convert || true)
+IPHONE_ICONS="20 29 40 60"
+IPAD_ICONS="20 29 40 76 83.5"
+RESOURCES=""
+if [ -z "$MAGICK" ] || [ ! -f "$ICON" ]; then
+  echo "    no app icon sizes: needs ImageMagick (magick or convert) and $ICON; the icon stays the loose icon.png" >&2
+else
+  "$MAGICK" "$ICON" -trim +repage "$ICONS/trimmed.png"
+  EDGE=$("$MAGICK" "$ICONS/trimmed.png" -alpha off -format '%[pixel:p{%[fx:w/2],2}]' info:)
+  "$MAGICK" "$ICONS/trimmed.png" -background "$EDGE" -alpha remove -alpha off "$ICONS/flat.png"
+  for size in $IPHONE_ICONS $IPAD_ICONS; do
+    for scale in 2 3; do
+      # The iPad has no @3x icons.
+      case " $IPHONE_ICONS " in *" $size "*) ;; *) [ "$scale" = 3 ] && continue ;; esac
+      px=$(awk "BEGIN { print int($size * $scale + 0.5) }")
+      name="AppIcon${size}x${size}@${scale}x.png"
+      "$MAGICK" "$ICONS/flat.png" -resize "${px}x${px}" -strip "$ICONS/$name"
+      case " $RESOURCES " in *" icons/$name"*) ;; *) RESOURCES+="  - icons/$name"$'\n' ;; esac
+    done
+  done
+  rm -f "$ICONS/trimmed.png" "$ICONS/flat.png"
+  echo "    app icon: $(ls "$ICONS" | wc -l) sizes from $ICON (corners $EDGE)" >&2
+fi
+icon_files() { for size in "$@"; do echo "        <string>AppIcon${size}x${size}</string>"; done; }
+ICON_PLIST=""
+if [ -n "$RESOURCES" ]; then
+  ICON_PLIST="  <key>CFBundleIcons</key>
+  <dict>
+    <key>CFBundlePrimaryIcon</key>
+    <dict>
+      <key>CFBundleIconFiles</key>
+      <array>
+$(icon_files $IPHONE_ICONS)
+      </array>
+    </dict>
+  </dict>
+  <key>CFBundleIcons~ipad</key>
+  <dict>
+    <key>CFBundlePrimaryIcon</key>
+    <dict>
+      <key>CFBundleIconFiles</key>
+      <array>
+$(icon_files $IPAD_ICONS)
+      </array>
+    </dict>
+  </dict>"
+fi
 cat > "$OUT/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -160,6 +220,7 @@ cat > "$OUT/Info.plist" <<EOF
   <string>$(xml "$PRODUCT")</string>
   <key>CFBundleShortVersionString</key>
   <string>$(xml "$VERSION")</string>
+$ICON_PLIST
 </dict>
 </plist>
 EOF
@@ -167,7 +228,9 @@ cat > "$OUT/xtool.yml" <<EOF
 version: 1
 bundleID: $IDENTIFIER
 infoPath: Info.plist
-iconPath: $APP/src-tauri/icons/icon.png
+iconPath: $ICON
+${RESOURCES:+resources:
+$RESOURCES}
 EOF
 
 # 5. Build, and for `run` sign and install. With a free Apple ID, xtool

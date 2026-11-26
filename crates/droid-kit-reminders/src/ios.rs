@@ -72,9 +72,11 @@ struct Tapped {
 }
 
 /// The reminder whose notification started the app, once (cold start). Taps
-/// while the app runs arrive as the Swift plugin's `tapped` event.
-pub fn pending_opened<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
-    swift(app).ok()?.0.run_mobile_plugin::<Tapped>("takeTapped", ()).ok()?.id
+/// while the app runs arrive as the Swift plugin's `tapped` event. Async, as
+/// on Android: a command that calls into the native part must not hold Tauri's
+/// plugin store lock while it waits.
+pub async fn pending_opened<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
+    swift(app).ok()?.0.run_mobile_plugin_async::<Tapped>("takeTapped", ()).await.ok()?.id
 }
 
 pub fn capabilities<R: Runtime>(_app: &AppHandle<R>) -> Capabilities {

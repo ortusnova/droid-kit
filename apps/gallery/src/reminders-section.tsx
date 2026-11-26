@@ -28,6 +28,8 @@ export function RemindersSection() {
     if (!('__TAURI_INTERNALS__' in globalThis)) return;
     void refresh();
     void capabilities().then(setCaps);
+    // Debug builds: `js` can schedule any rule, e.g. `__dkRemind.schedule({ id: 'm', title: 't', body: 'b', repeat: { kind: 'monthly', day: 31, time: '09:00' } })`.
+    if (window.__DK__?.debug) Object.assign(window, { __dkRemind: { schedule, cancel, list } });
     let stop: (() => void) | undefined;
     void onReminderOpened(id => {
       setOpened(id);
@@ -101,6 +103,26 @@ export function RemindersSection() {
           onPress={() => void run({ id: 'test-0630', title: 'droid-kit 06:30', body: 'Every day at 06:30', repeat: { kind: 'daily', time: '06:30' } })}
         >
           Daily 06:30
+        </Button>
+        <Button
+          id="remind-monthly"
+          onPress={() => {
+            const at = inMinutes(2);
+            const day = Number(at.date.slice(8));
+            void run({ id: 'test-monthly', title: 'droid-kit monthly test', body: `Day ${day} at ${at.time}`, repeat: { kind: 'monthly', day, time: at.time } });
+          }}
+        >
+          Monthly, today in 2 min
+        </Button>
+        <Button
+          id="remind-yearly"
+          onPress={() => {
+            const at = inMinutes(2);
+            const [month, day] = [Number(at.date.slice(5, 7)), Number(at.date.slice(8))];
+            void run({ id: 'test-yearly', title: 'droid-kit yearly test', body: `${month}/${day} at ${at.time}`, repeat: { kind: 'yearly', month, day, time: at.time } });
+          }}
+        >
+          Yearly, today in 2 min
         </Button>
         <Button
           id="remind-weekly"

@@ -228,6 +228,9 @@ importers:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
     devDependencies:
+      '@droid-kit/devtest':
+        specifier: workspace:*
+        version: link:../../packages/devtest
       '@tailwindcss/vite':
         specifier: 4.3.5
         version: 4.3.5(vite@8.3.8(@types/node@26.6.10)(jiti@2.7.0))
@@ -255,6 +258,15 @@ importers:
       vite:
         specifier: 8.3.8
         version: 8.3.8(@types/node@26.6.10)(jiti@2.7.0)
+
+  packages/devtest:
+    devDependencies:
+      '@types/node':
+        specifier: 26.6.10
+        version: 26.6.10
+      vitest:
+        specifier: 5.1.2
+        version: 5.1.2(@types/node@26.6.10)(vite@8.3.8(@types/node@26.6.10)(jiti@2.7.0))
 
   packages/platform:
     devDependencies:

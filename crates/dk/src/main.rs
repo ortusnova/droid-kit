@@ -8,6 +8,7 @@ mod kit;
 mod linux;
 mod new;
 mod proc;
+mod test;
 mod tokens;
 
 use std::path::PathBuf;
@@ -38,6 +39,16 @@ enum Cmd {
         /// Debug builds on linux-desktop: open this route first, e.g. /components/demo.
         #[arg(long)]
         route: Option<String>,
+    },
+    /// Build and start the app as `run` does, then run its device scenarios (tests/device/).
+    Test {
+        target: test::TestTarget,
+        /// Run only the scenarios whose name contains this text.
+        #[arg(long)]
+        only: Option<String>,
+        /// Use the app already running on the target: do not build, install or start it.
+        #[arg(long)]
+        no_build: bool,
     },
     /// Make a new app from the kit's template.
     New {
@@ -105,6 +116,7 @@ fn main() -> ExitCode {
         Cmd::Kit { cmd: KitCmd::Local { path } } => kit::local(&cli.app, &path),
         Cmd::Kit { cmd: KitCmd::Pin } => kit::pin(&cli.app),
         Cmd::Tokens { cmd: TokensCmd::Apply { file } } => tokens::apply(&cli.app, file.as_deref()),
+        Cmd::Test { target, only, no_build } => test::run(&cli.app, target, only.as_deref(), !no_build),
         Cmd::Run { target, timeout, route } => config::App::load(&cli.app).and_then(|app| match (target, route) {
             (Target::AndroidPhone, None) => android::run_phone(&app, timeout),
             (Target::AndroidEmulator, None) => android::run_emulator(&app),

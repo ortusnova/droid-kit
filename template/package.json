@@ -23,6 +23,7 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@droid-kit/devtest": "github:ortusnova/droid-kit#__DK_KIT_TAG__&path:/packages/devtest",
     "@tailwindcss/vite": "4.3.5",
     "@tauri-apps/cli": "2.12.6",
     "@types/node": "26.6.10",

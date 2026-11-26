@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 use std::time::Instant;
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
 use crate::android::{Outcome, report};
 use crate::config::{App, stamp};
@@ -167,7 +167,8 @@ fn reminders_args(app: &App, base: &[String], binary: &Path) -> Result<Vec<Strin
     fs::write(
         &launcher,
         format!(
-            "#!/bin/sh\n# Written by `dk run linux-desktop`. The reminders service runs it as `<this> --dk-reminder <id>`.\nexec podman run --rm {} {} {} \"$@\"\n",
+            "#!/bin/sh\n# Written by `dk run linux-desktop`. The reminders service runs it as `<this> --dk-reminder <id>`.\nexec podman run --rm --replace --name {} {} {} {} \"$@\"\n",
+            shell_quote(&format!("dk-{}", app.name())),
             words.join(" "),
             shell_quote(&app.linux.image),
             shell_quote(&binary.to_string_lossy()),
@@ -179,6 +180,28 @@ fn reminders_args(app: &App, base: &[String], binary: &Path) -> Result<Vec<Strin
         fs::set_permissions(&launcher, fs::Permissions::from_mode(0o755))?;
     }
     Ok(extra)
+}
+
+/// Where the evaluation channel's socket is on the host: `$XDG_RUNTIME_DIR/droid-kit/<identifier>/eval.sock`.
+/// The directory is private (mode 0700), in the user's runtime directory, and is mounted into the container.
+pub fn eval_socket(runtime: &str, identifier: &str) -> PathBuf {
+    Path::new(runtime).join("droid-kit").join(identifier).join("eval.sock")
+}
+
+/// The debug-only evaluation channel (`dk test linux-desktop`): a directory shared with the
+/// container, and the socket the platform plugin opens in it. A release build ignores the variable.
+fn eval_args(app: &App, runtime: &str) -> Result<Vec<String>> {
+    let socket = eval_socket(runtime, &app.identifier);
+    let dir = socket.parent().expect("the socket has a directory");
+    fs::create_dir_all(dir)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // The channel runs page code for whoever connects: only this user may.
+        fs::set_permissions(dir.parent().expect("a parent"), fs::Permissions::from_mode(0o700))?;
+        fs::set_permissions(dir, fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(vec!["-v".into(), format!("{}:/run/dk/eval", dir.display()), "-e".into(), "DK_EVAL_SOCKET=/run/dk/eval/eval.sock".into()])
 }
 
 /// The container's arguments that put an app on this desktop session: the
@@ -211,6 +234,7 @@ fn session_args(app: &App, runtime: &str, wayland: &str) -> Result<Vec<String>> 
             a.extend(["-e".into(), "XAUTHORITY=/run/dk/xauthority".into(), "-v".into(), format!("{xauth}:/run/dk/xauthority")]);
         }
     }
+    a.extend(eval_args(app, runtime)?);
     a.extend(["-e".into(), "HOME=/tmp".into()]);
     a.extend(locale_args(|name| std::env::var(name).ok()));
     // The container has no time zone of its own and would run in UTC, so the
@@ -264,12 +288,17 @@ fn remove_container(name: &str) -> Result<()> {
     anyhow::bail!("could not remove the container {name} of an earlier run; try `podman rm -f {name}`")
 }
 
-pub fn run_desktop(app: &App, timeout: u64, route: Option<&str>) -> Result<ExitCode> {
+pub fn run_desktop(app: &App, timeout: u64, route: Option<&str>, build_first: bool) -> Result<ExitCode> {
     let name = format!("dk-{}", app.name());
     // Before the build too: a running container holds the app's binary open.
     remove_container(&name)?;
-    build(app)?;
+    if build_first {
+        build(app)?;
+    }
     let binary = app.root.join("target/alpine/debug").join(&app.binary);
+    if !binary.is_file() {
+        bail!("{} does not exist; run `dk run linux-desktop` without --no-build first", binary.display());
+    }
     let runtime = std::env::var("XDG_RUNTIME_DIR").context("XDG_RUNTIME_DIR is not set; is this a desktop session?")?;
     let wayland = std::env::var("WAYLAND_DISPLAY").unwrap_or_else(|_| "wayland-0".into());
 
@@ -374,6 +403,11 @@ mod tests {
         assert_eq!(data_dirs(home, None, "com.ortusnova.x"), (PathBuf::from("/home/brian/.local/share"), PathBuf::from("/home/brian/.local/share/com.ortusnova.x")));
         assert_eq!(data_dirs(home, Some(PathBuf::new()), "a.b").1, PathBuf::from("/home/brian/.local/share/a.b"));
         assert_eq!(data_dirs(home, Some("/data".into()), "a.b"), (PathBuf::from("/data"), PathBuf::from("/data/a.b")));
+    }
+
+    #[test]
+    fn the_evaluation_socket_is_in_the_runtime_directory_under_the_identifier() {
+        assert_eq!(eval_socket("/run/user/1000", "com.ortusnova.lifedroid"), PathBuf::from("/run/user/1000/droid-kit/com.ortusnova.lifedroid/eval.sock"));
     }
 
     #[test]

@@ -39,6 +39,9 @@ enum Cmd {
         /// Debug builds on linux-desktop: open this route first, e.g. /components/demo.
         #[arg(long)]
         route: Option<String>,
+        /// linux-desktop: start the binary that is already built, without building. For a restart.
+        #[arg(long)]
+        no_build: bool,
     },
     /// Build and start the app as `run` does, then run its device scenarios (tests/device/).
     Test {
@@ -117,11 +120,12 @@ fn main() -> ExitCode {
         Cmd::Kit { cmd: KitCmd::Pin } => kit::pin(&cli.app),
         Cmd::Tokens { cmd: TokensCmd::Apply { file } } => tokens::apply(&cli.app, file.as_deref()),
         Cmd::Test { target, only, no_build } => test::run(&cli.app, target, only.as_deref(), !no_build),
-        Cmd::Run { target, timeout, route } => config::App::load(&cli.app).and_then(|app| match (target, route) {
-            (Target::AndroidPhone, None) => android::run_phone(&app, timeout),
-            (Target::AndroidEmulator, None) => android::run_emulator(&app),
-            (Target::LinuxDesktop, route) => linux::run_desktop(&app, timeout, route.as_deref()),
+        Cmd::Run { target, timeout, route, no_build } => config::App::load(&cli.app).and_then(|app| match (target, route) {
+            (Target::AndroidPhone, None) if !no_build => android::run_phone(&app, timeout),
+            (Target::AndroidEmulator, None) if !no_build => android::run_emulator(&app),
+            (Target::LinuxDesktop, route) => linux::run_desktop(&app, timeout, route.as_deref(), !no_build),
             (_, Some(_)) => Err(anyhow::anyhow!("--route works with linux-desktop only")),
+            (_, None) => Err(anyhow::anyhow!("--no-build works with linux-desktop only")),
         }),
     };
     match result {

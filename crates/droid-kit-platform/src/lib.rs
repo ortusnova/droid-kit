@@ -4,9 +4,15 @@
 //! Its init script sets `window.__DK_NATIVE__` before any page script runs:
 //! the platform, the web engine and its version where the user agent does not
 //! carry it (WebKitGTK), and whether this is a debug build.
+//!
+//! Debug builds on Linux also have the app's own snapshot for `dk run` (`screenshot`)
+//! and the evaluation channel for `dk test` (`evalchannel`, whose module documentation
+//! is the protocol). Neither is compiled into a release build.
 
 #[cfg(target_os = "linux")]
 mod screenshot;
+#[cfg(all(target_os = "linux", debug_assertions))]
+mod evalchannel;
 
 use serde::Deserialize;
 use tauri::{
@@ -182,6 +188,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             set_window_app_id(&app.config().identifier);
             #[cfg(all(target_os = "linux", debug_assertions))]
             screenshot::arm_fallback(app.clone());
+            #[cfg(all(target_os = "linux", debug_assertions))]
+            evalchannel::start(app.clone());
             Ok(())
         })
         .build()

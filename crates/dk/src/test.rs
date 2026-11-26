@@ -73,7 +73,7 @@ pub fn run(app_dir: &Path, target: TestTarget, only: Option<&str>, build: bool) 
         let started = match target {
             TestTarget::AndroidPhone => crate::android::run_phone(&app, 90)?,
             TestTarget::AndroidEmulator => crate::android::run_emulator(&app)?,
-            TestTarget::LinuxDesktop => crate::linux::run_desktop(&app, 90, None)?,
+            TestTarget::LinuxDesktop => crate::linux::run_desktop(&app, 90, None, true)?,
             TestTarget::Ios => unreachable!(),
         };
         if started != ExitCode::SUCCESS {

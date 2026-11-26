@@ -59,6 +59,15 @@ pub fn capture<R: Runtime>(window: tauri::WebviewWindow<R>, path: PathBuf) {
     });
 }
 
+/// Writes a snapshot of the web view to `path` and calls `done` with the outcome. Runs on the GTK main thread.
+/// For the evaluation channel, which takes any number of pictures; `capture` above is the one `dk run` asks for.
+#[cfg(debug_assertions)]
+pub fn snapshot_to(webview: webkit2gtk::WebView, path: PathBuf, done: impl FnOnce(Result<(), String>) + 'static) {
+    webview.snapshot(SnapshotRegion::Visible, SnapshotOptions::NONE, None::<&gio::Cancellable>, move |result| {
+        done(result.map_err(|e| e.to_string()).and_then(|surface| write(surface, &path)));
+    });
+}
+
 fn write(surface: cairo::Surface, path: &PathBuf) -> Result<(), String> {
     let image = cairo::ImageSurface::try_from(surface).map_err(|_| "the snapshot is not an image surface".to_string())?;
     let mut file = File::create(path).map_err(|e| format!("{}: {e}", path.display()))?;

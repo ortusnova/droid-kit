@@ -104,6 +104,15 @@ async fn capabilities<R: Runtime>(app: AppHandle<R>) -> Capabilities {
     platform::capabilities(&app)
 }
 
+/// Opens the system's notification settings for this app, where the user can
+/// allow notifications after refusing them. Does nothing where there is no
+/// such permission (Linux).
+#[tauri::command]
+#[specta::specta]
+async fn open_settings<R: Runtime>(app: AppHandle<R>) -> Result<(), ReminderError> {
+    platform::open_settings(&app)
+}
+
 /// The id of the reminder whose notification opened the app, once. Call at
 /// start-up: a tap that starts the app arrives before the page can listen.
 #[tauri::command]
@@ -131,7 +140,7 @@ pub(crate) fn opened<R: Runtime>(app: &AppHandle<R>, id: String) {
 fn specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
     tauri_specta::Builder::<R>::new()
         .plugin_name("droid-kit-reminders")
-        .commands(tauri_specta::collect_commands![schedule::<tauri::Wry>, cancel::<tauri::Wry>, list::<tauri::Wry>, capabilities::<tauri::Wry>, take_opened::<tauri::Wry>])
+        .commands(tauri_specta::collect_commands![schedule::<tauri::Wry>, cancel::<tauri::Wry>, list::<tauri::Wry>, capabilities::<tauri::Wry>, take_opened::<tauri::Wry>, open_settings::<tauri::Wry>])
         .events(tauri_specta::collect_events![ReminderOpened])
 }
 

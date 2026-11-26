@@ -45,6 +45,14 @@ export function list(): Promise<Result<Reminder[]>> {
   return attempt(() => commands.list());
 }
 
+/**
+ * Opens the system's notification settings for this app, so the user can allow
+ * notifications after `schedule` reported `permission-denied`. A no-op on Linux.
+ */
+export function openSettings(): Promise<Result<null>> {
+  return attempt(() => commands.openSettings());
+}
+
 export function capabilities(): Promise<Capabilities> {
   return commands.capabilities();
 }

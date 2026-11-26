@@ -20,8 +20,11 @@ export default scenario('smoke: floating action button, sheet, restart', async t
   await t.step('open the sheet page', () => d.open('/components/sheet'));
   await t.step('wait for the page', () => d.waitFor(`document.querySelector('#open-sheet') !== null`));
   await t.step('tap "Open the sheet"', () => d.tap('#open-sheet'));
-  await t.step('the sheet is open', async () => {
-    await d.waitFor(`location.search === '?sheet=demo' && document.querySelector('.dk-sheet-overlay') !== null`);
+  await t.step('the sheet is open, and on the screen', async () => {
+    // Present in the page is not enough: a sheet that is stuck entering (react-spectrum 10937) stays below the screen. The sheet's content area is the visible part: the panel around it can be taller than the screen.
+    await d.waitFor(
+      `location.search === '?sheet=demo' && (() => { const s = document.querySelector('.dk-sheet-content'); if (!s) return false; const r = s.getBoundingClientRect(); return r.height > 0 && r.top >= -1 && r.bottom <= innerHeight + 1; })()`,
+    );
     await d.screenshot('sheet-open');
   });
   await t.step('back closes the sheet', async () => {

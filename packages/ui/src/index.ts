@@ -1,4 +1,4 @@
-export const VERSION = '0.1.0';
+export const VERSION = '0.1.1';
 
 export { AppShell, AppBar, TabBar, Fab, IconButton, type Tab } from './frame';
 export { Button, TextField, TextArea, Select, CheckboxRow, SwitchRow, SegmentedControl, type ButtonVariant, type SelectOption } from './controls';

@@ -18,8 +18,9 @@ mod ios;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod linux;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -49,21 +50,42 @@ fn store_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ReminderError> 
 }
 
 pub(crate) fn read_store<R: Runtime>(app: &AppHandle<R>) -> Result<Vec<Reminder>, ReminderError> {
-    match std::fs::read_to_string(store_path(app)?) {
+    read_file(&store_path(app)?)
+}
+
+fn read_file(path: &Path) -> Result<Vec<Reminder>, ReminderError> {
+    match std::fs::read_to_string(path) {
         Ok(s) => serde_json::from_str(&s).map_err(ReminderError::platform),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
         Err(e) => Err(ReminderError::platform(e)),
     }
 }
 
-fn write_store<R: Runtime>(app: &AppHandle<R>, list: &[Reminder]) -> Result<(), ReminderError> {
-    let json = serde_json::to_string_pretty(list).map_err(ReminderError::platform)?;
-    let path = store_path(app)?;
-    // Write and rename, because the Android receiver and the Linux service
-    // rewrite the same file.
-    let tmp = path.with_extension("json.app.tmp");
+/// Held while the list is read, changed and written, so two calls at the same
+/// moment (two `schedule`s, a `schedule` and a `cancel`) neither lose a change
+/// nor fight over the temporary file.
+static STORE_LOCK: Mutex<()> = Mutex::new(());
+static TEMP_FILES: AtomicU64 = AtomicU64::new(0);
+
+/// Reads the list, lets `change` edit it, and writes it back, as one step.
+fn update_store<R: Runtime>(app: &AppHandle<R>, change: impl FnOnce(&mut Vec<Reminder>)) -> Result<(), ReminderError> {
+    update_file(&store_path(app)?, change)
+}
+
+fn update_file(path: &Path, change: impl FnOnce(&mut Vec<Reminder>)) -> Result<(), ReminderError> {
+    // A call that panicked while holding the lock left the file whole (it is replaced by a rename), so go on.
+    let _guard = STORE_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut list = read_file(path)?;
+    change(&mut list);
+    let json = serde_json::to_string_pretty(&list).map_err(ReminderError::platform)?;
+    // Write and rename, because the Android receiver and the Linux service rewrite the same file.
+    // The temporary name is unique to this write.
+    let tmp = path.with_extension(format!("json.app.{}.{}.tmp", std::process::id(), TEMP_FILES.fetch_add(1, Ordering::Relaxed)));
     std::fs::write(&tmp, json).map_err(ReminderError::platform)?;
-    std::fs::rename(&tmp, &path).map_err(ReminderError::platform)
+    std::fs::rename(&tmp, path).map_err(|e| {
+        let _ = std::fs::remove_file(&tmp);
+        ReminderError::platform(e)
+    })
 }
 
 /// Schedules a reminder, replacing any with the same id. Asks for the
@@ -77,9 +99,7 @@ async fn schedule<R: Runtime>(app: AppHandle<R>, reminder: Reminder, utc_offset_
     platform::ensure_permission(&app)?;
     platform::cancel(&app, &reminder.id)?;
     platform::schedule(&app, &reminder, utc_offset_minutes)?;
-    let mut list = read_store(&app)?;
-    model::upsert(&mut list, reminder);
-    write_store(&app, &list)?;
+    update_store(&app, |list| model::upsert(list, reminder))?;
     platform::changed(&app)
 }
 
@@ -88,9 +108,7 @@ async fn schedule<R: Runtime>(app: AppHandle<R>, reminder: Reminder, utc_offset_
 #[specta::specta]
 async fn cancel<R: Runtime>(app: AppHandle<R>, id: String) -> Result<(), ReminderError> {
     platform::cancel(&app, &id)?;
-    let mut list = read_store(&app)?;
-    list.retain(|r| r.id != id);
-    write_store(&app, &list)?;
+    update_store(&app, |list| list.retain(|r| r.id != id))?;
     platform::changed(&app)
 }
 
@@ -170,6 +188,55 @@ pub fn init() -> TauriPlugin<tauri::Wry> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::model::Repeat;
+
+    fn reminder(id: &str) -> Reminder {
+        Reminder { id: id.into(), title: "t".into(), body: "b".into(), repeat: Repeat::Daily { time: "07:00".into() } }
+    }
+
+    /// Two `schedule` or `cancel` calls at the same moment used to fail (they renamed the same temporary file)
+    /// or lose a change (each read the list before the other had written it).
+    #[test]
+    fn simultaneous_changes_all_succeed_and_none_is_lost() {
+        let dir = std::env::temp_dir().join(format!("dk-reminders-store-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("reminders.json");
+        let _ = std::fs::remove_file(&path);
+
+        let threads: Vec<_> = (0..32)
+            .map(|n| {
+                let path = path.clone();
+                std::thread::spawn(move || update_file(&path, |list| model::upsert(list, reminder(&format!("r{n}")))))
+            })
+            .collect();
+        for t in threads {
+            t.join().unwrap().expect("each simultaneous schedule succeeds");
+        }
+        assert_eq!(read_file(&path).unwrap().len(), 32);
+
+        // Cancels at the same moment as schedules.
+        let threads: Vec<_> = (0..32)
+            .map(|n| {
+                let path = path.clone();
+                std::thread::spawn(move || {
+                    if n % 2 == 0 { update_file(&path, |list| list.retain(|r| r.id != format!("r{n}"))) } else { update_file(&path, |list| model::upsert(list, reminder(&format!("s{n}")))) }
+                })
+            })
+            .collect();
+        for t in threads {
+            t.join().unwrap().expect("each simultaneous call succeeds");
+        }
+        let mut ids: Vec<_> = read_file(&path).unwrap().into_iter().map(|r| r.id).collect();
+        ids.sort();
+        let mut expected: Vec<String> = (0..32).filter(|n| n % 2 == 1).flat_map(|n| [format!("r{n}"), format!("s{n}")]).collect();
+        expected.sort();
+        assert_eq!(ids, expected);
+        let leftovers = std::fs::read_dir(&dir).unwrap().filter(|e| e.as_ref().unwrap().file_name() != "reminders.json").count();
+        assert_eq!(leftovers, 0, "no temporary file is left behind");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     /// Writes the TypeScript bindings into the @droid-kit/reminders package.
     #[test]
     fn export_bindings() {

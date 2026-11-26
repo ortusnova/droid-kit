@@ -36,7 +36,8 @@ function hexToColor(hex: string) {
 /** Applies choices to parsed sources in place. Returns a line per change made. */
 export function applyChoices(sources: Record<string, Json>, decisions: Decision[], choices: Choices): string[] {
   const log: string[] = [];
-  const date = choices.chosenAt.slice(0, 10);
+  // chosenAt is UTC; the note uses the local date of whoever applies it.
+  const date = new Date(choices.chosenAt).toLocaleDateString('en-CA');
   for (const [decisionId, optionId] of Object.entries(choices.choices)) {
     const decision = decisions.find(d => d.id === decisionId);
     if (!decision) throw new Error(`unknown decision ${decisionId}`);

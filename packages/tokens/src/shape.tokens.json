@@ -7,21 +7,21 @@
         "value": 0.5,
         "unit": "rem"
       },
-      "$description": "Checkboxes, toggles, badges: daisyUI --radius-selector."
+      "$description": "Checkboxes, toggles, badges: daisyUI --radius-selector. Chosen by Brian on 2026-11-25: Corner radius → daisyUI default."
     },
     "field": {
       "$value": {
         "value": 0.25,
         "unit": "rem"
       },
-      "$description": "Buttons, inputs, selects, tabs: daisyUI --radius-field."
+      "$description": "Buttons, inputs, selects, tabs: daisyUI --radius-field. Chosen by Brian on 2026-11-25: Corner radius → daisyUI default."
     },
     "box": {
       "$value": {
         "value": 0.5,
         "unit": "rem"
       },
-      "$description": "Cards, sheets, dialogs, alerts: daisyUI --radius-box."
+      "$description": "Cards, sheets, dialogs, alerts: daisyUI --radius-box. Chosen by Brian on 2026-11-25: Corner radius → daisyUI default."
     }
   },
   "size": {

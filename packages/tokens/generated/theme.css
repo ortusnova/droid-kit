@@ -55,16 +55,16 @@
   --color-base-200: #111113;
   --color-base-300: #3f3f46;
   --color-base-content: #fafafa;
-  --color-primary: #2b7fff;
-  --color-primary-content: #000000;
+  --color-primary: #155dfc;
+  --color-primary-content: #ffffff;
   --color-secondary: #152745;
   --color-secondary-content: #bedbff;
   --color-accent: #bedbff;
   --color-accent-content: #152745;
   --color-neutral: #fafafa;
   --color-neutral-content: #09090b;
-  --color-info: #2b7fff;
-  --color-info-content: #000000;
+  --color-info: #155dfc;
+  --color-info-content: #ffffff;
   --color-success: #00bc7d;
   --color-success-content: #09090b;
   --color-warning: #ffb900;
@@ -104,7 +104,7 @@
 /* The scale, as Tailwind theme variables (not inline), so utilities read
    var(--spacing), var(--text-body), ... and a subtree can override them. */
 @theme {
-  --spacing: 0.25rem;
+  --spacing: 0.21875rem;
   --spacing-touch: 44px;
   --font-sans: system-ui, Roboto, "Noto Sans", Cantarell, sans-serif;
   --text-caption: 0.75rem;

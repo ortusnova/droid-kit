@@ -96,6 +96,8 @@ function SheetDemo() {
           <TextField label="Habit" placeholder="Meditate for two minutes" />
           <TextField label="Cue" defaultValue="After I pour my coffee" />
           <Select label="Priority" options={PRIORITIES} defaultValue="health" />
+          <TimePicker label="Time" defaultValue={new Time(8, 0)} />
+          <DatePicker label="Start date" defaultValue={new CalendarDate(2026, 11, 25)} />
           <TextArea label="Notes" placeholder="Why this matters" />
           {Array.from({ length: 4 }, (_, i) => (
             <TextField key={i} label={`Extra field ${i + 1}`} placeholder="Makes the sheet taller than the screen" />
@@ -215,7 +217,7 @@ export const ENTRIES: Entry[] = [
     name: 'sheet',
     title: 'Bottom sheet',
     group: 'Overlays',
-    docs: ['isOpen, onClose, title', 'Closes by swipe down, backdrop tap, Escape — and by back when its open state is in the history (here ?sheet=demo)', 'Scrolls when taller than the screen; keeps a focused field above the keyboard', 'Covers the app bar, tab bar and floating button'],
+    docs: ['isOpen, onClose, title', 'Closes by swipe down, backdrop tap, Escape — and by back when its open state is in the history (here ?sheet=demo)', 'closeOnBack — for a sheet that is not in the history: the back action calls onClose, topmost overlay only (the time picker’s panel does this)', 'Scrolls when taller than the screen; keeps a focused field above the keyboard', 'Covers the app bar, tab bar and floating button'],
     demo: () => <p className="text-muted">The sheet opens over the whole screen; use the button below.</p>,
     live: () => <SheetDemo />,
   },
@@ -223,7 +225,7 @@ export const ENTRIES: Entry[] = [
     name: 'confirm-dialog',
     title: 'Confirm dialog',
     group: 'Overlays',
-    docs: ['isOpen, title, body?, confirmLabel, cancelLabel?', 'onConfirm, onCancel', 'destructive — red confirm button', 'Escape and a tap outside cancel'],
+    docs: ['isOpen, title, body?, confirmLabel, cancelLabel?', 'onConfirm, onCancel', 'destructive — red confirm button', 'Escape, a tap outside and the Android back action cancel (closeOnBack={false} when the app keeps the dialog in the history)'],
     demo: () => <p className="text-muted">The dialog opens over the whole screen; use the button below.</p>,
     live: () => <ConfirmDemo />,
   },
@@ -345,7 +347,7 @@ export const ENTRIES: Entry[] = [
     name: 'select',
     title: 'Select',
     group: 'Controls',
-    docs: ['label, options: { id, label }[]', 'value/defaultValue, onChange', 'The list opens in a popover; each option is 44 px tall'],
+    docs: ['label, options: { id, label }[]', 'value/defaultValue, onChange', 'The list opens in a popover; each option is 44 px tall', 'The Android back action closes the open list only'],
     demo: () => (
       <div className="grid grid-cols-2 gap-3">
         <Select label="Priority" options={PRIORITIES} defaultValue="health" />
@@ -357,7 +359,7 @@ export const ENTRIES: Entry[] = [
     name: 'checkbox-row',
     title: 'Checkbox row',
     group: 'Controls',
-    docs: ['title, subtitle?, trailing?', 'isSelected/defaultSelected, onChange', 'The whole row is the hit area'],
+    docs: ['title, subtitle?, trailing?', 'isSelected/defaultSelected, onChange', 'data-* attributes (test hooks) reach the row’s element — every kit component passes them to its root', 'The whole row is the hit area'],
     demo: () => (
       <List>
         <li><CheckboxRow title="Morning run" subtitle="After coffee · 6:30" defaultSelected trailing={<Badge tone="accent">12</Badge>} /></li>
@@ -394,6 +396,7 @@ export const ENTRIES: Entry[] = [
       'label, value/defaultValue (Time), onChange',
       'minuteStep: 1 (default) | 5; hourCycle?: 12 | 24 (default: the locale)',
       'panel: dial (default) | wheel — Brian chose these two on 2026-11-25',
+      'The panel is a sheet outside the history: the Android back action closes only the panel, not the sheet under it',
       'A finger tap on the field opens the panel, with no keyboard; a keyboard or mouse can type; the panel’s keyboard button switches to typing',
     ],
     demo: () => <p className="text-muted">The picker opens in a sheet; try both styles below.</p>,
@@ -410,7 +413,7 @@ export const ENTRIES: Entry[] = [
     name: 'date-picker',
     title: 'Date picker and calendar',
     group: 'Dates and times',
-    docs: ['DatePicker: label, value/defaultValue (CalendarDate), onChange — the calendar opens in a popover', 'MonthCalendar: value/defaultValue, onChange', 'Weeks start on the locale’s first day'],
+    docs: ['DatePicker: label, value/defaultValue (CalendarDate), onChange — the calendar opens in a popover', 'MonthCalendar: value/defaultValue, onChange', 'The Android back action closes the open popover only', 'Weeks start on the locale’s first day'],
     demo: () => (
       <div className="flex flex-col gap-3">
         <MonthCalendar defaultValue={new CalendarDate(2026, 11, 25)} />

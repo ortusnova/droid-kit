@@ -30,7 +30,9 @@ To work on the kit and this app together: `dk kit local <path to the kit>`
 - `src/main.tsx`: the router. Tabs are routes (add one to `TABS` and a route
   with `tab: '<id>'`), a sheet is the `?sheet=` search parameter, the app bar's
   back goes up a level when there is no history, and `installBackHandler()`
-  makes the Android back action go back and then leave the app.
+  makes the Android back action close the topmost popover or picker, then go
+  back, then leave the app. `defaultErrorComponent: RouteError` makes a route
+  that fails to render show up in `dk run` as `DK_ERROR`.
 - `src/app-info.ts`: the name, title and identifier, filled in by `dk new`.
 - `src-tauri/`: the Tauri app. Both kit plugins are registered in `src/lib.rs`;
   their permissions are in `capabilities/default.json`.

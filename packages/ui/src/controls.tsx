@@ -1,7 +1,7 @@
 // Controls: React Aria for behaviour, daisyUI classes for the look. daisyUI
 // styles [aria-checked], [aria-pressed] and [aria-selected], so the visual
 // state follows React Aria with no extra code.
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Button as AriaButton,
   Checkbox,
@@ -22,6 +22,8 @@ import {
   type Key,
 } from 'react-aria-components';
 import { Check } from 'lucide-react';
+import { useCloseOnBack } from './back';
+import { dataAttributes, type DataAttributes } from './dom';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'neutral';
 const VARIANT: Record<ButtonVariant, string> = {
@@ -40,6 +42,7 @@ export function Button({
   type = 'button',
   children,
   id,
+  ...rest
 }: {
   variant?: ButtonVariant;
   block?: boolean;
@@ -48,9 +51,9 @@ export function Button({
   type?: 'button' | 'submit';
   children: ReactNode;
   id?: string;
-}) {
+} & DataAttributes) {
   return (
-    <AriaButton id={id} type={type} onPress={onPress} isDisabled={isDisabled} className={`btn min-h-touch ${VARIANT[variant]} ${block ? 'btn-block' : ''}`}>
+    <AriaButton {...dataAttributes(rest)} id={id} type={type} onPress={onPress} isDisabled={isDisabled} className={`btn min-h-touch ${VARIANT[variant]} ${block ? 'btn-block' : ''}`}>
       {children}
     </AriaButton>
   );
@@ -68,6 +71,7 @@ export function TextField({
   isRequired,
   errorMessage,
   isInvalid,
+  ...rest
 }: {
   label: string;
   description?: string;
@@ -78,9 +82,9 @@ export function TextField({
   isRequired?: boolean;
   errorMessage?: string;
   isInvalid?: boolean;
-}) {
+} & DataAttributes) {
   return (
-    <AriaTextField className="fieldset" value={value} defaultValue={defaultValue} onChange={onChange} isRequired={isRequired} isInvalid={isInvalid}>
+    <AriaTextField {...dataAttributes(rest)} className="fieldset" value={value} defaultValue={defaultValue} onChange={onChange} isRequired={isRequired} isInvalid={isInvalid}>
       <Label className="fieldset-legend text-small">{label}</Label>
       <Input className={`${FIELD} data-[invalid]:border-error`} placeholder={placeholder} />
       {description && <Text slot="description" className="text-caption text-muted">{description}</Text>}
@@ -89,9 +93,17 @@ export function TextField({
   );
 }
 
-export function TextArea({ label, placeholder, value, defaultValue, onChange, rows = 3 }: { label: string; placeholder?: string; value?: string; defaultValue?: string; onChange?: (v: string) => void; rows?: number }) {
+export function TextArea({
+  label,
+  placeholder,
+  value,
+  defaultValue,
+  onChange,
+  rows = 3,
+  ...rest
+}: { label: string; placeholder?: string; value?: string; defaultValue?: string; onChange?: (v: string) => void; rows?: number } & DataAttributes) {
   return (
-    <AriaTextField className="fieldset" value={value} defaultValue={defaultValue} onChange={onChange}>
+    <AriaTextField {...dataAttributes(rest)} className="fieldset" value={value} defaultValue={defaultValue} onChange={onChange}>
       <Label className="fieldset-legend text-small">{label}</Label>
       <AriaTextArea className="textarea border-control bg-base-200 text-body w-full" placeholder={placeholder} rows={rows} />
     </AriaTextField>
@@ -110,6 +122,7 @@ export function Select({
   defaultValue,
   onChange,
   placeholder = 'Choose…',
+  ...rest
 }: {
   label: string;
   options: SelectOption[];
@@ -117,10 +130,15 @@ export function Select({
   defaultValue?: string;
   onChange?: (id: string) => void;
   placeholder?: string;
-}) {
+} & DataAttributes) {
+  const [open, setOpen] = useState(false);
+  useCloseOnBack(open, () => setOpen(false));
   return (
     <AriaSelect
+      {...dataAttributes(rest)}
       className="fieldset"
+      isOpen={open}
+      onOpenChange={setOpen}
       selectedKey={value}
       defaultSelectedKey={defaultValue}
       onSelectionChange={(k: Key | null) => k !== null && onChange?.(String(k))}
@@ -166,6 +184,7 @@ export function CheckboxRow({
   isSelected,
   defaultSelected,
   onChange,
+  ...rest
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -173,9 +192,9 @@ export function CheckboxRow({
   isSelected?: boolean;
   defaultSelected?: boolean;
   onChange?: (selected: boolean) => void;
-}) {
+} & DataAttributes) {
   return (
-    <Checkbox className="min-h-touch flex cursor-pointer items-center gap-3 px-4 py-2" isSelected={isSelected} defaultSelected={defaultSelected} onChange={onChange}>
+    <Checkbox {...dataAttributes(rest)} className="min-h-touch flex cursor-pointer items-center gap-3 px-4 py-2" isSelected={isSelected} defaultSelected={defaultSelected} onChange={onChange}>
       {({ isSelected: on, isFocusVisible }) => (
         <>
           <span aria-hidden aria-checked={on} className={`checkbox checkbox-primary ${isFocusVisible ? 'outline-primary outline-2 outline-offset-2' : ''}`} />
@@ -191,9 +210,16 @@ export function CheckboxRow({
 }
 
 /** A row that is one big switch. */
-export function SwitchRow({ title, subtitle, isSelected, defaultSelected, onChange }: { title: ReactNode; subtitle?: ReactNode; isSelected?: boolean; defaultSelected?: boolean; onChange?: (on: boolean) => void }) {
+export function SwitchRow({
+  title,
+  subtitle,
+  isSelected,
+  defaultSelected,
+  onChange,
+  ...rest
+}: { title: ReactNode; subtitle?: ReactNode; isSelected?: boolean; defaultSelected?: boolean; onChange?: (on: boolean) => void } & DataAttributes) {
   return (
-    <Switch className="min-h-touch flex cursor-pointer items-center justify-between gap-4 py-2" isSelected={isSelected} defaultSelected={defaultSelected} onChange={onChange}>
+    <Switch {...dataAttributes(rest)} className="min-h-touch flex cursor-pointer items-center justify-between gap-4 py-2" isSelected={isSelected} defaultSelected={defaultSelected} onChange={onChange}>
       {({ isSelected: on, isFocusVisible }) => (
         <>
           <span className="min-w-0">
@@ -214,15 +240,17 @@ export function SegmentedControl<T extends string>({
   value,
   defaultValue,
   onChange,
+  ...rest
 }: {
   label: string;
   options: Array<{ id: T; label: string }>;
   value?: T;
   defaultValue?: T;
   onChange?: (id: T) => void;
-}) {
+} & DataAttributes) {
   return (
     <ToggleButtonGroup
+      {...dataAttributes(rest)}
       aria-label={label}
       className="tabs tabs-box w-full flex-nowrap"
       selectionMode="single"

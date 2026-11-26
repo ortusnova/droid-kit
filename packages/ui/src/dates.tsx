@@ -30,8 +30,11 @@ import { CalendarDays, ChevronLeft, ChevronRight, Clock, Keyboard } from 'lucide
 import { Button, SegmentedControl } from './controls';
 import { IconButton } from './frame';
 import { Sheet } from './overlays';
+import { useCloseOnBack } from './back';
+import { dataAttributes, type DataAttributes } from './dom';
 import {
   cadenceOfKind,
+  safeLocale,
   dialAngle,
   dialHour,
   dialMinute,
@@ -69,6 +72,7 @@ export function TimePicker({
   minuteStep = 1,
   panel = 'dial',
   hourCycle,
+  ...rest
 }: {
   label: string;
   value?: Time;
@@ -77,8 +81,8 @@ export function TimePicker({
   minuteStep?: 1 | 5;
   panel?: TimePanel;
   hourCycle?: 12 | 24;
-}) {
-  const { locale } = useLocale();
+} & DataAttributes) {
+  const locale = safeLocale(useLocale().locale);
   const twelve = hourCycle ? hourCycle === 12 : uses12HourClock(locale);
   const [inner, setInner] = useState<Time>(defaultValue ?? new Time(9, 0));
   const time = value ?? inner;
@@ -95,7 +99,7 @@ export function TimePicker({
   };
 
   return (
-    <div className="fieldset">
+    <div {...dataAttributes(rest)} className="fieldset">
       <TimeField
         value={time}
         onChange={t => t && set(t)}
@@ -166,7 +170,7 @@ function TimePanelSheet({
   }, [isOpen, initial, minuteStep]);
   const Panel = panel === 'wheel' ? WheelPanel : DialPanel;
   return (
-    <Sheet isOpen={isOpen} onClose={onCancel} title={title}>
+    <Sheet isOpen={isOpen} onClose={onCancel} title={title} closeOnBack>
       <p className="text-headline mb-3 text-center font-bold tabular-nums" aria-live="polite" data-testid="time-preview">
         {formatTime(draft, twelve)}
       </p>
@@ -429,9 +433,15 @@ function DialPanel(props: PanelProps) {
 // ---------------------------------------------------------------- calendar and date picker
 
 /** A month calendar. Weeks start on the locale's first day. */
-export function MonthCalendar({ label = 'Month', value, defaultValue, onChange }: { label?: string; value?: CalendarDate; defaultValue?: CalendarDate; onChange?: (d: CalendarDate) => void }) {
+export function MonthCalendar({
+  label = 'Month',
+  value,
+  defaultValue,
+  onChange,
+  ...rest
+}: { label?: string; value?: CalendarDate; defaultValue?: CalendarDate; onChange?: (d: CalendarDate) => void } & DataAttributes) {
   return (
-    <Calendar aria-label={label} value={value} defaultValue={defaultValue} onChange={d => onChange?.(d as CalendarDate)}>
+    <Calendar {...dataAttributes(rest)} aria-label={label} value={value} defaultValue={defaultValue} onChange={d => onChange?.(d as CalendarDate)}>
       <CalendarBody />
     </Calendar>
   );
@@ -536,9 +546,17 @@ function YearGrid({ label, items, value, onPick, choice }: { label: string; item
 }
 
 /** A date field with a calendar that opens below it. */
-export function DatePicker({ label, value, defaultValue, onChange }: { label: string; value?: CalendarDate; defaultValue?: CalendarDate; onChange?: (d: CalendarDate) => void }) {
+export function DatePicker({
+  label,
+  value,
+  defaultValue,
+  onChange,
+  ...rest
+}: { label: string; value?: CalendarDate; defaultValue?: CalendarDate; onChange?: (d: CalendarDate) => void } & DataAttributes) {
+  const [open, setOpen] = useState(false);
+  useCloseOnBack(open, () => setOpen(false));
   return (
-    <AriaDatePicker className="fieldset" value={value} defaultValue={defaultValue} onChange={d => d && onChange?.(d as CalendarDate)}>
+    <AriaDatePicker {...dataAttributes(rest)} className="fieldset" isOpen={open} onOpenChange={setOpen} value={value} defaultValue={defaultValue} onChange={d => d && onChange?.(d as CalendarDate)}>
       <Label className="fieldset-legend text-small">{label}</Label>
       <Group className="flex items-center gap-1">
         <DateInput className="input border-control bg-base-200 text-body min-h-touch flex-1 gap-0">{segment => <DateSegment segment={segment} className="dk-segment" />}</DateInput>
@@ -560,14 +578,15 @@ export function DatePicker({ label, value, defaultValue, onChange }: { label: st
 // ---------------------------------------------------------------- week strip
 
 /** The seven days of a week, in the locale's order, with today marked. */
-export function WeekStrip({ value, onChange }: { value: CalendarDate; onChange: (d: CalendarDate) => void }) {
-  const { locale } = useLocale();
+export function WeekStrip({ value, onChange, ...rest }: { value: CalendarDate; onChange: (d: CalendarDate) => void } & DataAttributes) {
+  const locale = safeLocale(useLocale().locale);
   const days = useMemo(() => weekOf(value, locale), [value, locale]);
   const now = todayLocal();
   // Dates are turned into instants at UTC midnight, so format them in UTC too.
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   return (
     <ToggleButtonGroup
+      {...dataAttributes(rest)}
       aria-label="Day"
       selectionMode="single"
       disallowEmptySelection
@@ -609,8 +628,8 @@ const KINDS: Array<{ id: CadenceKind; label: string }> = [
 ];
 
 /** How often something repeats; for weekly, on which weekdays. */
-export function CadencePicker({ label = 'Cadence', value, onChange }: { label?: string; value: Cadence; onChange: (c: Cadence) => void }) {
-  const { locale } = useLocale();
+export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: { label?: string; value: Cadence; onChange: (c: Cadence) => void } & DataAttributes) {
+  const locale = safeLocale(useLocale().locale);
   const order = weekdayOrder(locale);
   // Dates are turned into instants at UTC midnight, so format them in UTC too.
   const narrow = new Intl.DateTimeFormat(locale, { weekday: 'narrow', timeZone: 'UTC' });
@@ -618,7 +637,7 @@ export function CadencePicker({ label = 'Cadence', value, onChange }: { label?: 
   // 2026-11-23 is a Monday: ISO weekday n is that date plus n - 1 days.
   const dateOf = (d: Weekday) => new CalendarDate(2026, 11, 22 + d).toDate('UTC');
   return (
-    <div className="fieldset gap-2">
+    <div {...dataAttributes(rest)} className="fieldset gap-2">
       <span className="fieldset-legend text-small" id="cadence-label">{label}</span>
       <SegmentedControl label={label} options={KINDS} value={value.kind} onChange={k => onChange(cadenceOfKind(k, value, isoWeekday(todayLocal())))} />
       {value.kind === 'weekly' && (

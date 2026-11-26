@@ -30,6 +30,31 @@ export function toggleWeekday(c: Cadence & { kind: 'weekly' }, day: Weekday): Ca
   return { kind: 'weekly', weekdays };
 }
 
+const FALLBACK_LOCALE = 'en-US';
+
+/**
+ * A language tag that `Intl` accepts, made from whatever the environment gave.
+ * A POSIX locale name (`en_US.utf8`, `de_DE@euro`) becomes `en-US`, `de-DE`;
+ * `C`, `POSIX`, an empty or an invalid value becomes `en-US`. `Intl` throws a
+ * RangeError on a tag it cannot parse, and WebKitGTK reports `C` as the
+ * language when the process has no locale variables.
+ */
+export function safeLocale(tag: string | null | undefined): string {
+  const name = (tag ?? '').trim().split(/[.@]/)[0]!.replace(/_/g, '-');
+  if (!name || /^(c|posix)$/i.test(name)) return FALLBACK_LOCALE;
+  try {
+    const [supported] = Intl.DateTimeFormat.supportedLocalesOf(new Intl.Locale(name).toString());
+    return supported ?? FALLBACK_LOCALE;
+  } catch {
+    return FALLBACK_LOCALE;
+  }
+}
+
+/** The system's language as a tag `Intl` accepts: `navigator.language` through `safeLocale`. */
+export function systemLocale(): string {
+  return safeLocale(typeof navigator === 'undefined' ? undefined : navigator.language);
+}
+
 /** ISO weekday of a date. */
 export function isoWeekday(date: CalendarDate): Weekday {
   // getDayOfWeek with the en-US locale counts from Sunday = 0.
@@ -40,13 +65,13 @@ export function isoWeekday(date: CalendarDate): Weekday {
 /** The seven weekdays in the locale's order, starting on its first day of the week. */
 export function weekdayOrder(locale: string): Weekday[] {
   const anchor = new CalendarDate(2026, 11, 25);
-  const first = startOfWeek(anchor, locale);
+  const first = startOfWeek(anchor, safeLocale(locale));
   return Array.from({ length: 7 }, (_, i) => isoWeekday(first.add({ days: i })));
 }
 
 /** The seven dates of the week containing `date`, in the locale's order. */
 export function weekOf(date: CalendarDate, locale: string): CalendarDate[] {
-  const first = startOfWeek(date, locale);
+  const first = startOfWeek(date, safeLocale(locale));
   return Array.from({ length: 7 }, (_, i) => first.add({ days: i }));
 }
 
@@ -56,7 +81,7 @@ export function todayLocal(): CalendarDate {
 
 /** Whether the locale writes times with a 12-hour clock. */
 export function uses12HourClock(locale: string): boolean {
-  const cycle = new Intl.DateTimeFormat(locale, { hour: 'numeric' }).resolvedOptions().hourCycle;
+  const cycle = new Intl.DateTimeFormat(safeLocale(locale), { hour: 'numeric' }).resolvedOptions().hourCycle;
   return cycle === 'h12' || cycle === 'h11';
 }
 

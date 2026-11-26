@@ -5,6 +5,9 @@
 //! the platform, the web engine and its version where the user agent does not
 //! carry it (WebKitGTK), and whether this is a debug build.
 
+#[cfg(target_os = "linux")]
+mod screenshot;
+
 use serde::Deserialize;
 use tauri::{
     Manager, Runtime,
@@ -41,9 +44,17 @@ struct Platform<R: Runtime> {
 /// Called by the page once its first screen has rendered. `dk run` waits for
 /// this line on the app's standard error (Linux). On Android the page also
 /// logs `DK_READY` to the console, which Tauri forwards to logcat.
+///
+/// Linux debug builds started with `DK_SCREENSHOT=<file>` then write a PNG of
+/// the app's own web view to that file, so `dk run` needs no window capture.
+/// If the page never gets ready, `DK_SCREENSHOT_AFTER=<seconds>` writes it anyway.
 #[tauri::command]
-fn ready() {
+fn ready<R: Runtime>(_webview: tauri::WebviewWindow<R>) {
     eprintln!("DK_READY");
+    #[cfg(all(target_os = "linux", debug_assertions))]
+    if let Some(path) = std::env::var_os("DK_SCREENSHOT") {
+        screenshot::capture(_webview, path.into());
+    }
 }
 
 /// Uncaught errors from the page, so they reach the same log as `DK_READY`.
@@ -151,6 +162,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(not(target_os = "android"))]
             let platform = Platform::<R> { _marker: std::marker::PhantomData };
             app.manage(platform);
+            #[cfg(all(target_os = "linux", debug_assertions))]
+            screenshot::arm_fallback(app.clone());
             Ok(())
         })
         .build()

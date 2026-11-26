@@ -1002,11 +1002,13 @@ dependencies = [
 name = "droid-kit-platform"
 version = "0.1.0"
 dependencies = [
+ "cairo-rs",
  "serde",
  "serde_json",
  "tauri",
  "tauri-plugin",
  "thiserror 2.0.21",
+ "webkit2gtk",
  "webkit2gtk-sys",
 ]
 

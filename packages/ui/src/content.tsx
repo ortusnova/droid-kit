@@ -2,11 +2,12 @@
 // the kit's colour roles.
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-aria-components';
+import { dataAttributes, type DataAttributes } from './dom';
 import { ChevronRight, CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
 
-export function Card({ title, subtitle, children, actions }: { title?: ReactNode; subtitle?: ReactNode; children?: ReactNode; actions?: ReactNode }) {
+export function Card({ title, subtitle, children, actions, ...rest }: { title?: ReactNode; subtitle?: ReactNode; children?: ReactNode; actions?: ReactNode } & DataAttributes) {
   return (
-    <section className="card bg-base-100 border-divider border">
+    <section {...dataAttributes(rest)} className="card bg-base-100 border-divider border">
       <div className="card-body gap-2 p-4">
         {title && <h2 className="card-title text-title">{title}</h2>}
         {subtitle && <p className="text-small text-muted">{subtitle}</p>}
@@ -18,9 +19,9 @@ export function Card({ title, subtitle, children, actions }: { title?: ReactNode
 }
 
 /** A grouped list with an optional heading. Children are ListRows, CheckboxRows or SwitchRows. */
-export function List({ title, subtitle, children }: { title?: ReactNode; subtitle?: ReactNode; children: ReactNode }) {
+export function List({ title, subtitle, children, ...rest }: { title?: ReactNode; subtitle?: ReactNode; children: ReactNode } & DataAttributes) {
   return (
-    <section className="bg-base-100 rounded-box border-divider overflow-hidden border">
+    <section {...dataAttributes(rest)} className="bg-base-100 rounded-box border-divider overflow-hidden border">
       {(title || subtitle) && (
         <header className="px-4 pt-3 pb-1">
           {title && <h2 className="text-body font-semibold">{title}</h2>}
@@ -33,7 +34,7 @@ export function List({ title, subtitle, children }: { title?: ReactNode; subtitl
 }
 
 /** A row in a List. With `href` it is a link to another screen. */
-export function ListRow({ title, subtitle, leading, trailing, href }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; trailing?: ReactNode; href?: string }) {
+export function ListRow({ title, subtitle, leading, trailing, href, ...rest }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; trailing?: ReactNode; href?: string } & DataAttributes) {
   const body = (
     <>
       {leading && <span className="flex-none">{leading}</span>}
@@ -46,12 +47,12 @@ export function ListRow({ title, subtitle, leading, trailing, href }: { title: R
     </>
   );
   const row = 'min-h-touch flex items-center gap-3 px-4 py-2';
-  return <li>{href ? <Link href={href} className={`${row} outline-primary focus-visible:outline-2`}>{body}</Link> : <div className={row}>{body}</div>}</li>;
+  return <li {...dataAttributes(rest)}>{href ? <Link href={href} className={`${row} outline-primary focus-visible:outline-2`}>{body}</Link> : <div className={row}>{body}</div>}</li>;
 }
 
-export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; title: string; body?: string; action?: ReactNode }) {
+export function EmptyState({ icon, title, body, action, ...rest }: { icon?: ReactNode; title: string; body?: string; action?: ReactNode } & DataAttributes) {
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+    <div {...dataAttributes(rest)} className="flex flex-col items-center gap-2 px-6 py-12 text-center">
       {icon && <div className="text-muted mb-2">{icon}</div>}
       <h2 className="text-title font-bold">{title}</h2>
       {body && <p className="text-muted max-w-xs">{body}</p>}
@@ -69,24 +70,24 @@ const BADGE: Record<Tone, string> = {
   danger: 'badge-error',
 };
 
-export function Badge({ tone = 'neutral', icon, children }: { tone?: Tone; icon?: ReactNode; children: ReactNode }) {
+export function Badge({ tone = 'neutral', icon, children, ...rest }: { tone?: Tone; icon?: ReactNode; children: ReactNode } & DataAttributes) {
   return (
-    <span className={`badge gap-1 ${BADGE[tone]}`}>
+    <span {...dataAttributes(rest)} className={`badge gap-1 ${BADGE[tone]}`}>
       {icon}
       {children}
     </span>
   );
 }
 
-export function ProgressBar({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
-  return <progress className="progress progress-primary bg-base-200 w-full" value={value} max={max} aria-label={label} />;
+export function ProgressBar({ label, value, max = 100, ...rest }: { label: string; value: number; max?: number } & DataAttributes) {
+  return <progress {...dataAttributes(rest)} className="progress progress-primary bg-base-200 w-full" value={value} max={max} aria-label={label} />;
 }
 
 /** A ring with a label in the middle, e.g. "4/7". `value` is 0 to 100. */
-export function ProgressRing({ label, value, children, size = '4rem' }: { label: string; value: number; children?: ReactNode; size?: string }) {
+export function ProgressRing({ label, value, children, size = '4rem', ...rest }: { label: string; value: number; children?: ReactNode; size?: string } & DataAttributes) {
   const style = { '--value': Math.round(value), '--size': size, '--thickness': '0.4rem' } as CSSProperties;
   return (
-    <div className="radial-progress text-primary" style={style} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+    <div {...dataAttributes(rest)} className="radial-progress text-primary" style={style} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
       <span className="text-base-content text-small font-semibold">{children}</span>
     </div>
   );
@@ -100,10 +101,10 @@ const CALLOUT: Record<Exclude<Tone, 'neutral'>, { cls: string; icon: ReactNode }
 };
 
 /** An inline message. `urgent` announces it to screen readers at once (role=alert). */
-export function Callout({ tone = 'accent', title, children, urgent }: { tone?: Exclude<Tone, 'neutral'>; title?: string; children?: ReactNode; urgent?: boolean }) {
+export function Callout({ tone = 'accent', title, children, urgent, ...rest }: { tone?: Exclude<Tone, 'neutral'>; title?: string; children?: ReactNode; urgent?: boolean } & DataAttributes) {
   const c = CALLOUT[tone];
   return (
-    <div role={urgent ? 'alert' : 'status'} className={`alert alert-soft ${c.cls} items-start`}>
+    <div {...dataAttributes(rest)} role={urgent ? 'alert' : 'status'} className={`alert alert-soft ${c.cls} items-start`}>
       {c.icon}
       <div className="text-base-content">
         {title && <h3 className="font-bold">{title}</h3>}

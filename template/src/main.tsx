@@ -12,7 +12,7 @@ import {
 import { RouterProvider as AriaRouterProvider } from 'react-aria-components';
 import { Home } from 'lucide-react';
 import { applyStartRoute, installBackHandler, reportErrors, signalReady, syncSystemBars } from '@droid-kit/platform';
-import { AppBar, AppShell, TabBar, ToastRegion } from '@droid-kit/ui';
+import { AppBar, AppShell, RouteError, TabBar, ToastRegion } from '@droid-kit/ui';
 import './app.css';
 import { APP } from './app-info';
 import { HomePage } from './home';
@@ -44,6 +44,8 @@ declare module '@tanstack/react-router' {
 applyStartRoute();
 
 const router = createRouter({
+  // A route that fails to render shows RouteError and reports DK_ERROR, so `dk run` names the failure.
+  defaultErrorComponent: RouteError,
   routeTree: rootRoute.addChildren([homeRoute, aboutRoute]),
   scrollRestoration: true,
   // One scroll position per screen, whatever sheet is open over it.

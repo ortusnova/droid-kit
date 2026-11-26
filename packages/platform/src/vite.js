@@ -18,9 +18,10 @@ export function droidKit() {
     name: 'droid-kit',
     // The kit's components and the app must share one copy of React, React Aria
     // and the date library, or their contexts (the router bridge, the theme
-    // providers) do not meet. Normally one copy is installed; with `dk kit
+    // providers) do not meet. The same goes for the platform package, which
+    // holds the back-interceptor stack the kit's overlays share with the app. Normally one copy is installed; with `dk kit
     // local` the kit checkout has its own node_modules.
-    config: () => ({ resolve: { dedupe: ['react', 'react-dom', 'react-aria-components', '@internationalized/date'] } }),
+    config: () => ({ resolve: { dedupe: ['react', 'react-dom', 'react-aria-components', '@internationalized/date', '@droid-kit/platform'] } }),
     transformIndexHtml: {
       order: 'post',
       handler(html) {

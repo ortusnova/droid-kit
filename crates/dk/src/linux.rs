@@ -198,6 +198,7 @@ fn session_args(app: &App, runtime: &str, wayland: &str) -> Result<Vec<String>> 
         }
     }
     a.extend(["-e".into(), "HOME=/tmp".into()]);
+    a.extend(locale_args(|name| std::env::var(name).ok()));
     // The container has no time zone of its own and would run in UTC, so the
     // app's local times (a reminder "in 2 minutes") would not be this
     // desktop's. ICU, which WebKit uses, reads `TZ`; the rules are mounted for C code.
@@ -210,6 +211,19 @@ fn session_args(app: &App, runtime: &str, wayland: &str) -> Result<Vec<String>> 
     Ok(a)
 }
 
+/// The variables that choose a locale. The container has none of its own, and
+/// without them WebKitGTK reports `navigator.language` as `C`, which `Intl` rejects.
+const LOCALE_VARS: &[&str] = &["LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG", "LC_CTYPE", "LC_TIME", "LC_NUMERIC", "LC_COLLATE", "LC_MONETARY"];
+
+/// `-e NAME=value` for each locale variable the host has set.
+fn locale_args(get: impl Fn(&str) -> Option<String>) -> Vec<String> {
+    LOCALE_VARS
+        .iter()
+        .filter_map(|name| get(name).filter(|v| !v.is_empty()).map(|v| ["-e".to_string(), format!("{name}={v}")]))
+        .flatten()
+        .collect()
+}
+
 /// The IANA name of this machine's time zone, from the `/etc/localtime` link.
 fn host_time_zone() -> Option<String> {
     let target = fs::read_link("/etc/localtime").ok()?;
@@ -217,38 +231,81 @@ fn host_time_zone() -> Option<String> {
     target.split_once("zoneinfo/").map(|(_, name)| name.to_string())
 }
 
+/// Removes the container of an earlier run, which may still be running or may
+/// have crashed: both leave a container of that name behind (no `--rm`, so the
+/// logs outlive a crash).
+fn remove_container(name: &str) -> Result<()> {
+    let exists = |name: &str| succeeds(Command::new("podman").args(["container", "exists", name]));
+    if !exists(name) {
+        return Ok(());
+    }
+    eprintln!("removing the container of an earlier run: {name}");
+    let _ = output(Command::new("podman").args(["rm", "-f", "-t", "1", name]));
+    for _ in 0..20 {
+        if !exists(name) {
+            return Ok(());
+        }
+        sleep(0.25);
+    }
+    anyhow::bail!("could not remove the container {name} of an earlier run; try `podman rm -f {name}`")
+}
+
 pub fn run_desktop(app: &App, timeout: u64, route: Option<&str>) -> Result<ExitCode> {
+    let name = format!("dk-{}", app.name());
+    // Before the build too: a running container holds the app's binary open.
+    remove_container(&name)?;
     build(app)?;
     let binary = app.root.join("target/alpine/debug").join(&app.binary);
     let runtime = std::env::var("XDG_RUNTIME_DIR").context("XDG_RUNTIME_DIR is not set; is this a desktop session?")?;
     let wayland = std::env::var("WAYLAND_DISPLAY").unwrap_or_else(|_| "wayland-0".into());
-    let name = format!("dk-{}", app.name());
 
-    let _ = output(Command::new("podman").args(["rm", "-f", &name]));
+    let base = app.artifacts()?.join(format!("{}-linux-desktop-{}", app.name(), stamp()));
+    let shot = base.with_extension("png");
+    let log = base.with_extension("log");
+
     let mut args = session_args(app, &runtime, &wayland)?;
     if uses_reminders(app) {
-        // The launcher starts the app again for a tap on a notification: no start route there.
+        // The launcher starts the app again for a tap on a notification: no start route or screenshot there.
         let extra = reminders_args(app, &args, &binary)?;
         args.extend(extra);
     }
     if let Some(route) = route {
         args.extend(["-e".to_string(), format!("DK_START_ROUTE={route}")]);
     }
+    // The app writes the picture of its own web view when it is ready.
+    // Two seconds before dk gives up it also takes one of a page that is not ready, to show where it hangs.
+    args.extend(["-e".to_string(), format!("DK_SCREENSHOT={}", shot.display())]);
+    args.extend(["-e".to_string(), format!("DK_SCREENSHOT_AFTER={}", timeout.saturating_sub(3).max(1))]);
+    remove_container(&name)?;
     let mut c = Command::new("podman");
     // No --rm: the logs must outlive a crash. The next run removes the old container.
-    c.args(["run", "-d", "--name", &name]).args(&args).arg(&app.linux.image).arg(&binary);
+    // --replace: if something started a container of this name in between, it goes too.
+    c.args(["run", "-d", "--replace", "--name", &name]).args(&args).arg(&app.linux.image).arg(&binary);
     output(&mut c)?;
 
     let outcome = wait_ready(&name, timeout)?;
-    let base = app.artifacts()?.join(format!("{}-linux-desktop-{}", app.name(), stamp()));
-    let shot = base.with_extension("png");
-    let log = base.with_extension("log");
-    if matches!(outcome, Outcome::Ready(_)) {
-        sleep(0.5);
-        screenshot_active_window(&shot)?;
+    if matches!(outcome, Outcome::Ready(_) | Outcome::TimedOut) {
+        wait_screenshot(&name, &shot);
     }
     fs::write(&log, logs(&name))?;
     report(outcome, timeout, &shot, &log)
+}
+
+/// Waits for the app to say it has written its screenshot. Without one the run
+/// still succeeds, and says why: a missing picture beats one of another window.
+fn wait_screenshot(name: &str, shot: &Path) {
+    for _ in 0..40 {
+        let log = logs(name);
+        if let Some(line) = log.lines().find(|l| l.starts_with("DK_SCREENSHOT_FAILED")) {
+            eprintln!("no screenshot: {}", line.trim_start_matches("DK_SCREENSHOT_FAILED").trim());
+            return;
+        }
+        if log.lines().any(|l| l.starts_with("DK_SCREENSHOT ")) && shot.exists() {
+            return;
+        }
+        sleep(0.25);
+    }
+    eprintln!("no screenshot: the app did not write one within 10 s (is the kit's platform plugin older than 0.1.1?)");
 }
 
 fn logs(name: &str) -> String {
@@ -278,22 +335,21 @@ fn wait_ready(name: &str, timeout: u64) -> Result<Outcome> {
     Ok(Outcome::TimedOut)
 }
 
-/// Captures the newly opened window, which KWin has given focus, without a prompt.
-fn screenshot_active_window(path: &Path) -> Result<()> {
-    run(Command::new("spectacle").args(["-b", "-n", "-a", "-o"]).arg(path))?;
-    // spectacle returns before the file is written.
-    for _ in 0..20 {
-        if path.exists() {
-            return Ok(());
-        }
-        sleep(0.25);
-    }
-    anyhow::bail!("spectacle did not write {}", path.display())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_hosts_locale_goes_into_the_container() {
+        let env = |name: &str| match name {
+            "LANG" => Some("en_US.utf8".to_string()),
+            "LC_TIME" => Some("en_GB.UTF-8".to_string()),
+            "LC_ALL" => Some(String::new()),
+            _ => None,
+        };
+        assert_eq!(locale_args(env), ["-e", "LANG=en_US.utf8", "-e", "LC_TIME=en_GB.UTF-8"]);
+        assert!(locale_args(|_| None).is_empty());
+    }
 
     #[test]
     fn shell_words_are_quoted_for_the_launcher_script() {

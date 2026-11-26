@@ -1,7 +1,7 @@
 {
   "name": "@droid-kit/devtest",
   "description": "droid-kit device scenarios: one scenario format, one driver per target, run by `dk test`",
-  "version": "0.2.0-rc.2",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "exports": {

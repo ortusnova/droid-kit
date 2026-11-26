@@ -1,7 +1,7 @@
 {
   "name": "@droid-kit/platform",
   "description": "droid-kit platform layer: form factor, insets, theme, engine check",
-  "version": "0.2.0-rc.2",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "exports": {

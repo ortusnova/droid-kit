@@ -80,8 +80,12 @@ struct SystemBars {
     preference: Option<String>,
 }
 
+// A command that calls into Kotlin is `async` and awaits `run_mobile_plugin_async`. Tauri runs a
+// sync command inline while it holds the plugin store's lock, and Kotlin answers from Android's
+// main thread, which may be waiting for that same lock (it takes it when a page finishes loading):
+// the two wait for each other and the app stops responding.
 #[tauri::command]
-fn set_system_bars<R: Runtime>(
+async fn set_system_bars<R: Runtime>(
     app: tauri::AppHandle<R>,
     dark: bool,
     background: Option<String>,
@@ -89,16 +93,16 @@ fn set_system_bars<R: Runtime>(
 ) -> CmdResult<()> {
     let _bars = SystemBars { dark, background, preference };
     #[cfg(target_os = "android")]
-    app.state::<Platform<R>>().handle.run_mobile_plugin::<()>("setSystemBars", _bars)?;
+    app.state::<Platform<R>>().handle.run_mobile_plugin_async::<()>("setSystemBars", _bars).await?;
     #[cfg(not(target_os = "android"))]
     let _ = app.state::<Platform<R>>();
     Ok(())
 }
 
 #[tauri::command]
-fn move_to_background<R: Runtime>(app: tauri::AppHandle<R>) -> CmdResult<()> {
+async fn move_to_background<R: Runtime>(app: tauri::AppHandle<R>) -> CmdResult<()> {
     #[cfg(target_os = "android")]
-    app.state::<Platform<R>>().handle.run_mobile_plugin::<()>("moveToBackground", ())?;
+    app.state::<Platform<R>>().handle.run_mobile_plugin_async::<()>("moveToBackground", ()).await?;
     #[cfg(not(target_os = "android"))]
     let _ = app.state::<Platform<R>>();
     Ok(())

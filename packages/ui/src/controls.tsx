@@ -224,7 +224,7 @@ export function SegmentedControl<T extends string>({
   return (
     <ToggleButtonGroup
       aria-label={label}
-      className="tabs tabs-box flex-nowrap"
+      className="tabs tabs-box w-full flex-nowrap"
       selectionMode="single"
       disallowEmptySelection
       selectedKeys={value !== undefined ? [value] : undefined}
@@ -235,7 +235,7 @@ export function SegmentedControl<T extends string>({
       }}
     >
       {options.map(o => (
-        <ToggleButton key={o.id} id={o.id} className={({ isSelected }) => `tab min-h-touch flex-1 px-1 ${isSelected ? 'tab-active' : 'text-muted'}`}>
+        <ToggleButton key={o.id} id={o.id} className={({ isSelected }) => `tab min-h-touch min-w-0 flex-1 px-1 ${isSelected ? 'tab-active' : 'text-muted'}`}>
           {o.label}
         </ToggleButton>
       ))}

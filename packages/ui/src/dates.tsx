@@ -431,7 +431,7 @@ function DialPanel(props: PanelProps) {
 /** A month calendar. Weeks start on the locale's first day. */
 export function MonthCalendar({ label = 'Month', value, defaultValue, onChange }: { label?: string; value?: CalendarDate; defaultValue?: CalendarDate; onChange?: (d: CalendarDate) => void }) {
   return (
-    <Calendar aria-label={label} value={value} defaultValue={defaultValue} onChange={d => onChange?.(d as CalendarDate)} className="p-1">
+    <Calendar aria-label={label} value={value} defaultValue={defaultValue} onChange={d => onChange?.(d as CalendarDate)}>
       <CalendarBody />
     </Calendar>
   );
@@ -492,7 +492,7 @@ function CalendarBody() {
         </CalendarYearPicker>
       )}
       {view === 'days' && (
-        <CalendarGrid weekdayStyle="narrow" className="w-full border-separate border-spacing-y-0.5">
+        <CalendarGrid weekdayStyle="narrow" className="w-full border-separate border-spacing-y-0.5 [&_td]:p-0 [&_th]:p-0">
           <CalendarGridHeader>{day => <CalendarHeaderCell className="text-caption text-muted pb-1 font-normal">{day}</CalendarHeaderCell>}</CalendarGridHeader>
           <CalendarGridBody>
             {date => (
@@ -577,7 +577,7 @@ export function WeekStrip({ value, onChange }: { value: CalendarDate; onChange: 
         const d = days.find(x => x.toString() === k);
         if (d) onChange(d);
       }}
-      className="grid grid-cols-7 gap-1"
+      className="grid grid-cols-7"
     >
       {days.map(d => {
         const isToday = d.compare(now) === 0;
@@ -626,7 +626,7 @@ export function CadencePicker({ label = 'Cadence', value, onChange }: { label?: 
           aria-label="Weekdays"
           selectionMode="multiple"
           selectedKeys={value.weekdays.map(String)}
-          className="flex justify-between gap-1"
+          className="flex justify-between"
         >
           {order.map(d => (
             <ToggleButton

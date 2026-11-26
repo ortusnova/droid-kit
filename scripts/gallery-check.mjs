@@ -1,8 +1,12 @@
 // Gallery checks (ui-components spec), in headless Chromium at 412 × 915:
 //   - every interactive element's hit area is at least the touch-target token;
+//   - no interactive element sticks out of a clipping container or the screen;
 //   - a light and a dark screenshot of every gallery page.
 //
-//   node scripts/gallery-check.mjs [--inject-undersized]
+//   node scripts/gallery-check.mjs [--inject-undersized] [--width 360]
+//
+// --width sets the screen width in CSS px (default 412); 360 is a common
+// narrow Android phone and the Droidian 6T's width.
 //
 // Builds the gallery, serves it with `vite preview`, visits every page, and
 // writes screenshots to apps/gallery/artifacts/gallery-check/. Exits 1 if any
@@ -15,9 +19,11 @@ import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const GALLERY = join(ROOT, 'apps/gallery');
-const OUT = join(GALLERY, 'artifacts/gallery-check');
 const inject = process.argv.includes('--inject-undersized');
 const TARGET = JSON.parse(readFileSync(join(ROOT, 'packages/tokens/src/space.tokens.json'), 'utf8')).space['touch-target'].$value.value;
+const widthArg = process.argv.indexOf('--width');
+const WIDTH = widthArg > 0 ? Number(process.argv[widthArg + 1]) : 412;
+const OUT = join(GALLERY, WIDTH === 412 ? 'artifacts/gallery-check' : `artifacts/gallery-check-${WIDTH}`);
 const PREVIEW = 5340;
 const CDP = 9360;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -44,10 +50,20 @@ const MEASURE = `(() => {
     // Nothing to tap: not rendered, or only for screen readers (visually hidden, 1 px).
     if (r.width <= 1 && r.height <= 1) continue;
     if (getComputedStyle(target).visibility === 'hidden') continue;
-    if (r.width + 0.5 < ${TARGET} || r.height + 0.5 < ${TARGET}) {
-      const name = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('placeholder') || el.tagName).trim().slice(0, 40);
-      out.push(name + ' (' + el.tagName.toLowerCase() + (el.getAttribute('role') ? '[role=' + el.getAttribute('role') + ']' : '') + ') ' + Math.round(r.width) + '×' + Math.round(r.height));
+    const name = (el.getAttribute('aria-label') || el.textContent || el.getAttribute('placeholder') || el.tagName).trim().slice(0, 40);
+    const what = name + ' (' + el.tagName.toLowerCase() + (el.getAttribute('role') ? '[role=' + el.getAttribute('role') + ']' : '') + ')';
+    if (r.width + 0.5 < ${TARGET} || r.height + 0.5 < ${TARGET}) out.push(what + " hit area " + Math.round(r.width) + "×" + Math.round(r.height) + " is below ${TARGET} px");
+    // Sideways overflow: outside the screen or outside any ancestor's box (a card, a field group).
+    let clip = { left: 0, right: document.documentElement.clientWidth };
+    for (let a = target.parentElement; a && a !== document.body; a = a.parentElement) {
+      const ox = getComputedStyle(a).overflowX;
+      // A sideways scroller (a tab strip, a wheel) may hold off-screen items on purpose.
+      if ((ox === 'auto' || ox === 'scroll') && a.scrollWidth > a.clientWidth) { clip = null; break; }
+      const ar = a.getBoundingClientRect();
+      if (ar.width <= 1) continue;
+      clip = { left: Math.max(clip.left, ar.left), right: Math.min(clip.right, ar.right) };
     }
+    if (clip && (r.left < clip.left - 0.5 || r.right > clip.right + 0.5)) out.push(what + ' overflows sideways by ' + Math.round(Math.max(clip.left - r.left, r.right - clip.right)) + ' px');
   }
   return out;
 })()`;
@@ -87,7 +103,7 @@ async function main() {
       await sleep(400);
     };
 
-    await send('Emulation.setDeviceMetricsOverride', { width: 412, height: 915, deviceScaleFactor: 2, mobile: true });
+    await send('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: 915, deviceScaleFactor: 2, mobile: true });
     await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
     await send('Page.enable');
     for (let i = 0; i < 50; i++) {
@@ -124,8 +140,8 @@ async function main() {
     await sleep(300);
     rmSync(profile, { recursive: true, force: true });
   }
-  for (const p of problems) console.error(`problem: hit area below ${TARGET} px: ${p}`);
-  if (!problems.length) console.error(`ok: every interactive element is at least ${TARGET} × ${TARGET} px`);
+  for (const p of problems) console.error(`problem: ${p}`);
+  if (!problems.length) console.error(`ok at ${WIDTH} px wide: every interactive element is at least ${TARGET} × ${TARGET} px and none overflows sideways`);
   process.exitCode = problems.length ? 1 : 0;
 }
 

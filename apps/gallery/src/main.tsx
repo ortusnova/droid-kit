@@ -60,6 +60,12 @@ const TABS = [
   { id: 'components', label: 'Components', href: '/components', icon: <Blocks size={20} /> },
 ];
 
+/** The app bar's back: back in history, or up to the parent screen when the app started on this one. */
+function goUp(r: ReturnType<typeof useRouter>, pathname: string) {
+  if (r.history.canGoBack()) r.history.back();
+  else void r.navigate({ to: pathname.replace(/\/[^/]+\/?$/, '') || '/', replace: true });
+}
+
 function Shell() {
   const matches = useMatches();
   const leaf = matches[matches.length - 1];
@@ -72,7 +78,7 @@ function Shell() {
   return (
     <AriaRouterProvider navigate={to => r.navigate({ to })} useHref={to => r.buildLocation({ to }).href}>
       <AppShell
-        appBar={<AppBar title={title} onBack={leaf?.staticData.nested ? () => r.history.back() : undefined} />}
+        appBar={<AppBar title={title} onBack={leaf?.staticData.nested ? () => goUp(r, leaf.pathname) : undefined} />}
         tabBar={<TabBar tabs={TABS} active={leaf?.staticData.tab ?? 'platform'} />}
       >
         <Outlet />

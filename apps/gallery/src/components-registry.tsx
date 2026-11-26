@@ -137,7 +137,7 @@ function ConfirmDemo() {
   );
 }
 
-function TimeDemo({ panel, step = 5, cycle }: { panel: TimePanel; step?: 1 | 5; cycle?: 12 | 24 }) {
+function TimeDemo({ panel, step = 1, cycle }: { panel: TimePanel; step?: 1 | 5; cycle?: 12 | 24 }) {
   const [t, setT] = useState(new Time(6, 45));
   return (
     <div data-time-demo={`${panel}-${step}-${cycle ?? 'locale'}`}>
@@ -392,17 +392,17 @@ export const ENTRIES: Entry[] = [
     group: 'Dates and times',
     docs: [
       'label, value/defaultValue (Time), onChange',
-      'minuteStep: 1 | 5; hourCycle?: 12 | 24 (default: the locale)',
-      'panel: wheel | dial | chips — three styles until Brian chooses one',
+      'minuteStep: 1 (default) | 5; hourCycle?: 12 | 24 (default: the locale)',
+      'panel: dial (default) | wheel — Brian chose these two on 2026-11-25',
       'A finger tap on the field opens the panel, with no keyboard; a keyboard or mouse can type; the panel’s keyboard button switches to typing',
     ],
-    demo: () => <p className="text-muted">The picker opens in a sheet; try each style below.</p>,
+    demo: () => <p className="text-muted">The picker opens in a sheet; try both styles below.</p>,
     live: () => (
       <div className="flex flex-col gap-4">
+        <Labelled label="Dial (default): tap or drag around the face"><TimeDemo panel="dial" /></Labelled>
+        <Labelled label="Dial, 5-minute steps"><TimeDemo panel="dial" step={5} /></Labelled>
         <Labelled label="Wheel"><TimeDemo panel="wheel" /></Labelled>
-        <Labelled label="Dial"><TimeDemo panel="dial" /></Labelled>
-        <Labelled label="Chips"><TimeDemo panel="chips" /></Labelled>
-        <Labelled label="Wheel, 24-hour, 1-minute steps"><TimeDemo panel="wheel" step={1} cycle={24} /></Labelled>
+        <Labelled label="Wheel, 24-hour, 5-minute steps"><TimeDemo panel="wheel" step={5} cycle={24} /></Labelled>
       </div>
     ),
   },

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CalendarDate, Time } from '@internationalized/date';
 import {
   cadenceOfKind,
+  dialAngle,
+  dialHour,
+  dialMinute,
   from12Hour,
   isoWeekday,
   minuteChoices,
@@ -66,5 +69,25 @@ describe('time', () => {
     expect(minuteChoices(1)).toHaveLength(60);
     expect(snapMinute(47, 5)).toBe(45);
     expect(snapMinute(47, 1)).toBe(47);
+  });
+});
+
+describe('dial dragging', () => {
+  const at = (minute: number) => dialAngle(Math.sin((minute / 60) * 2 * Math.PI), -Math.cos((minute / 60) * 2 * Math.PI));
+  it('reads every minute around the dial with a 1-minute step', () => {
+    for (let m = 0; m < 60; m++) expect(dialMinute(at(m), 1)).toBe(m);
+    expect(dialMinute(at(59.6), 1)).toBe(0);
+  });
+  it('rounds to the 5-minute step', () => {
+    expect(dialMinute(at(47), 5)).toBe(45);
+    expect(dialMinute(at(48), 5)).toBe(50);
+    expect(dialMinute(at(58), 5)).toBe(0);
+  });
+  it('reads hours on the outer and inner rings', () => {
+    expect(dialHour(at(0), false)).toBe(12);
+    expect(dialHour(at(30), false)).toBe(6);
+    expect(dialHour(at(0), true)).toBe(0);
+    expect(dialHour(at(5), true)).toBe(13);
+    expect(dialHour(at(55), true)).toBe(23);
   });
 });

@@ -269,12 +269,17 @@ socket. The Linux driver uses the **evaluation channel**: a Unix socket at
 opens, in debug builds on Linux only, when `dk run linux-desktop` sets
 `DK_EVAL_SOCKET`. It runs JavaScript in the page and writes a screenshot of the
 web view. A release build does not contain it. Nothing is registered on the
-session bus, and the socket is mode 0600.
+session bus, and the socket is mode 0600. A locked screen stops the web view's
+animation frames, so every call into the page would time out: `dk test
+linux-desktop` reads the session's `LockedHint` from logind first (read-only,
+through `loginctl`), and if the screen is locked it says so and exits 2. If the
+state cannot be read it warns and goes on.
 
 Exit codes of `dk test`: 0 when every scenario passed or was skipped, 1 when
 one failed (or the app reported an error while starting), and 2 when the run
 could not start: no driver for the target, no `@droid-kit/devtest`, no
-scenarios in `tests/device/`, or no first screen within the timeout.
+scenarios in `tests/device/`, a locked screen on `linux-desktop`, or no first
+screen within the timeout.
 
 ## In an app
 

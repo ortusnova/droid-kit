@@ -65,6 +65,10 @@ pub fn context(app: &App, target: TestTarget, run_dir: &Path, dk: &Path) -> serd
 pub fn run(app_dir: &Path, target: TestTarget, only: Option<&str>, build: bool) -> Result<ExitCode> {
     let app = App::load(app_dir)?;
     let cli = runner(&app.dir)?;
+    // Before anything is built: a locked screen stops the page's frames, and every step would wait out its timeout.
+    if target == TestTarget::LinuxDesktop && !crate::linux::screen_ready() {
+        return Ok(ExitCode::from(2));
+    }
     if build {
         let started = match target {
             TestTarget::AndroidPhone => crate::android::run_phone(&app, 90)?,

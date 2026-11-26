@@ -381,9 +381,58 @@ fn wait_ready(name: &str, timeout: u64) -> Result<Outcome> {
     Ok(Outcome::TimedOut)
 }
 
+/// What `LockedHint` says: the output of `loginctl show-session <id> -p LockedHint [--value]`.
+/// `None` when it says neither `yes` nor `no`.
+pub fn parse_locked_hint(output: &str) -> Option<bool> {
+    match output.trim().trim_start_matches("LockedHint=") {
+        "yes" => Some(true),
+        "no" => Some(false),
+        _ => None,
+    }
+}
+
+/// Whether this session's screen is locked, read from logind (`loginctl`, read-only: nothing is
+/// registered on the session bus). `None` when it cannot be read.
+fn screen_locked() -> Option<bool> {
+    let session = std::env::var("XDG_SESSION_ID").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| "auto".into());
+    let out = Command::new("loginctl").args(["show-session", &session, "-p", "LockedHint", "--value"]).stderr(std::process::Stdio::null()).output().ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    parse_locked_hint(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// Checks the lock before a run that drives the page, and reports whether to go on. A locked screen
+/// stops the web view's animation frames, so every call into the page would wait out its timeout.
+/// If the state cannot be read, it warns and goes on.
+pub fn screen_ready() -> bool {
+    match screen_locked() {
+        Some(true) => {
+            eprintln!("dk: the screen is locked: unlock it and run again");
+            false
+        }
+        Some(false) => true,
+        None => {
+            eprintln!("dk: warning: could not read whether the screen is locked (loginctl show-session); going on");
+            true
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_lock_hint_is_read_with_or_without_its_name() {
+        assert_eq!(parse_locked_hint("yes\n"), Some(true));
+        assert_eq!(parse_locked_hint("no\n"), Some(false));
+        assert_eq!(parse_locked_hint("LockedHint=yes\n"), Some(true));
+        assert_eq!(parse_locked_hint("LockedHint=no"), Some(false));
+        assert_eq!(parse_locked_hint(""), None);
+        assert_eq!(parse_locked_hint("maybe"), None);
+        assert_eq!(parse_locked_hint("Yes"), None);
+    }
 
     #[test]
     fn the_hosts_locale_goes_into_the_container() {

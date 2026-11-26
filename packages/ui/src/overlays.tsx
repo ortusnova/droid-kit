@@ -72,7 +72,9 @@ function useSheetWorkaround(overlay: React.RefObject<HTMLDivElement | null>, isO
       }, 700);
       return () => clearTimeout(timer);
     }
-    const el = last.current ?? overlay.current;
+    // The element that is closing now. `last` is the one the previous opening saw, which a sheet closed
+    // before its own 700 ms had passed never replaced: it is gone from the page, and the new one would stay.
+    const el = overlay.current?.isConnected ? overlay.current : last.current;
     const timer = setTimeout(() => {
       if (el?.isConnected) el.dispatchEvent(new CustomEvent('react-aria-sheet-close'));
     }, 800);

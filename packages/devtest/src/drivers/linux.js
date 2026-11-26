@@ -32,6 +32,25 @@ const sleep = (/** @type {number} */ ms) => new Promise(resolve => setTimeout(re
  * Every function throws a message that names the selector, so a failing step says what it could not find.
  */
 function pageHelpers() {
+  // A synthetic pointer is not one the browser knows, so `setPointerCapture(id)` throws for it, and a handler that
+  // captures the pointer (a dial, a slider) would stop before it did anything. Ours have ids from 9000 up; for those
+  // capture is a no-op. A real pointer's capture is left alone.
+  const SYNTHETIC = 9000;
+  if (!(/** @type {any} */ (Element.prototype).__dkCapture)) {
+    for (const name of /** @type {const} */ (['setPointerCapture', 'releasePointerCapture'])) {
+      const original = Element.prototype[name];
+      Element.prototype[name] = function (/** @type {number} */ id) {
+        if (id >= SYNTHETIC) return undefined;
+        return original.call(this, id);
+      };
+    }
+    const has = Element.prototype.hasPointerCapture;
+    Element.prototype.hasPointerCapture = function (/** @type {number} */ id) {
+      return id >= SYNTHETIC ? true : has.call(this, id);
+    };
+    /** @type {any} */ (Element.prototype).__dkCapture = true;
+  }
+
   /** @param {string} selector */
   const find = selector => {
     const el = document.querySelector(selector);
@@ -91,7 +110,7 @@ function pageHelpers() {
         clientY: y,
         screenX: x,
         screenY: y,
-        pointerId: 1,
+        pointerId: SYNTHETIC + 1,
         pointerType: 'touch',
         isPrimary: true,
         width: 1,

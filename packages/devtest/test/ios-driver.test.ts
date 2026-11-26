@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import { createHash } from 'node:crypto';
 import type { Socket } from 'node:net';
@@ -19,7 +19,9 @@ let sockets: Socket[];
 let page: vm.Context;
 let evaluations: string[];
 let notified: string[];
-const saved = { pmd: process.env.DK_PYMOBILEDEVICE3, port: process.env.DK_IOS_CDP_PORT, timeout: process.env.DK_IOS_EVAL_TIMEOUT_MS };
+// While true the page is listed only after the app was launched (it is in the background until then).
+let inBackground = false;
+const saved = { pmd: process.env.DK_PYMOBILEDEVICE3, port: process.env.DK_IOS_CDP_PORT, timeout: process.env.DK_IOS_EVAL_TIMEOUT_MS, first: process.env.DK_IOS_FIRST_WAIT_MS };
 
 /** A text frame, server to client (unmasked). */
 const frame = (text: string) => {
@@ -58,6 +60,7 @@ beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), 'dk-devtest-ios-'));
   evaluations = [];
   notified = [];
+  inBackground = false;
   sockets = [];
   page = vm.createContext({ setTimeout, Promise, JSON, String, console });
   page.window = page;
@@ -69,6 +72,7 @@ beforeEach(async () => {
   server = http.createServer((req, res) => {
     if (req.url === '/json') {
       res.setHeader('content-type', 'application/json');
+      if (inBackground && !(existsSync(join(dir, 'calls')) && /launch/.test(readFileSync(join(dir, 'calls'), 'utf8')))) return void res.end('[]');
       res.end(JSON.stringify([{ id: 'PID:9999:1', type: 'page', url: 'tauri://localhost', webSocketDebuggerUrl: `ws://127.0.0.1:${port}/devtools/page/0` }, { id: 'PID:4242:1', type: 'page', url: 'tauri://localhost', webSocketDebuggerUrl: `ws://127.0.0.1:${port}/devtools/page/1` }]));
     } else res.statusCode = 404, res.end();
   });
@@ -122,7 +126,7 @@ afterEach(async () => {
   for (const s of sockets) s.destroy();
   await new Promise(resolve => server.close(resolve));
   rmSync(dir, { recursive: true, force: true });
-  for (const [key, value] of [['DK_PYMOBILEDEVICE3', saved.pmd], ['DK_IOS_CDP_PORT', saved.port], ['DK_IOS_EVAL_TIMEOUT_MS', saved.timeout]] as const) {
+  for (const [key, value] of [['DK_PYMOBILEDEVICE3', saved.pmd], ['DK_IOS_CDP_PORT', saved.port], ['DK_IOS_EVAL_TIMEOUT_MS', saved.timeout], ['DK_IOS_FIRST_WAIT_MS', saved.first]] as const) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
@@ -203,6 +207,15 @@ describe('the iPhone driver', () => {
     await d.close();
   });
 
+  it('brings the app to the front when it is in the background at the start (dk test --no-build)', async () => {
+    inBackground = true;
+    process.env.DK_IOS_FIRST_WAIT_MS = '600';
+    const d = await createDriver(context());
+    expect(readFileSync(join(dir, 'calls'), 'utf8')).toContain('developer dvt launch --no-kill-existing XTL-ABC.com.example.app');
+    expect(await d.eval('1 + 1')).toBe(2);
+    await d.close();
+  });
+
   it('refuses notifications by saying a finger is needed', async () => {
     const d = await createDriver(context());
     await expect(d.waitForNotification({ title: 'x' })).rejects.toThrow(/needs a finger/);
@@ -214,7 +227,6 @@ describe('the iPhone driver', () => {
     const d = await createDriver(context());
     await d.forceStop();
     await d.restart();
-    const { readFileSync } = await import('node:fs');
     const calls = readFileSync(join(dir, 'calls'), 'utf8').trim().split('\n');
     expect(calls[0]).toBe('developer dvt kill 4242');
     expect(calls).toContain('developer dvt launch --kill-existing XTL-ABC.com.example.app');

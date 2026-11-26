@@ -391,6 +391,12 @@ export async function createDriver(context) {
 
   // The app must already run (`dk test` started it): connect to its page.
   await bundle();
-  await ready(40_000);
+  // With --no-build the app may be in the background, or not running: bring it to the front (start it if it is not running).
+  try {
+    await ready(Number(process.env.DK_IOS_FIRST_WAIT_MS) || 8_000);
+  } catch {
+    await launch(false);
+    await ready(40_000);
+  }
   return driver;
 }

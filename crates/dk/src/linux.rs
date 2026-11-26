@@ -70,6 +70,20 @@ fn uses_reminders(app: &App) -> bool {
     fs::read_to_string(app.dir.join("src-tauri/Cargo.toml")).is_ok_and(|t| t.contains("droid-kit-reminders"))
 }
 
+/// Run in the build image from the app's directory. The service is a package of
+/// the kit's workspace, which the app reaches only as a dependency of the
+/// reminders plugin (a git checkout of the kit's tag, or the local checkout
+/// under `dk kit local`), and cargo does not build a dependency's binary
+/// or accept its features from the app. So: ask cargo where the dependency's
+/// manifest is, and build it there, with the kit's own Cargo.lock.
+const REMINDERD_SCRIPT: &str = r#"set -e
+M=$(cargo metadata --format-version 1 --manifest-path src-tauri/Cargo.toml | node -e 'const m = JSON.parse(require("fs").readFileSync(0, "utf8")); const p = m.packages.find(p => p.name === "droid-kit-reminderd"); if (!p) { console.error("droid-kit-reminderd is not a dependency of this app; is droid-kit-reminders in src-tauri/Cargo.toml?"); process.exit(1); } console.log(p.manifest_path)')
+T=$(rustc -vV | sed -n 's/^host: //p')
+cargo build --manifest-path "$M" --features daemon --target "$T" --locked
+cp @ROOT@/target/alpine-reminderd/$T/debug/droid-kit-reminderd @ROOT@/target/alpine/debug/droid-kit-reminderd.new
+mv -f @ROOT@/target/alpine/debug/droid-kit-reminderd.new @ROOT@/target/alpine/debug/droid-kit-reminderd
+"#;
+
 /// Builds the reminders service static (a musl binary that also runs on this
 /// laptop's glibc host, where the notifications are delivered) and puts it next
 /// to the app's binary, where the plugin looks for it (replaced by a rename, as
@@ -81,11 +95,7 @@ fn build_reminderd(app: &App) -> Result<()> {
         return Ok(());
     }
     let root = app.root.display();
-    let script = format!(
-        "T=$(rustc -vV | sed -n 's/^host: //p') && cargo build -p droid-kit-reminderd --features daemon --target $T \
-         && cp {root}/target/alpine-reminderd/$T/debug/droid-kit-reminderd {root}/target/alpine/debug/droid-kit-reminderd.new \\
-         && mv -f {root}/target/alpine/debug/droid-kit-reminderd.new {root}/target/alpine/debug/droid-kit-reminderd"
-    );
+    let script = REMINDERD_SCRIPT.replace("@ROOT@", &root.to_string());
     let mut c = Command::new("podman");
     c.args(["run", "--rm", "--security-opt", "label=disable", "--userns=keep-id"]);
     for m in mounts(app) {

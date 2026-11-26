@@ -1003,6 +1003,7 @@ name = "droid-kit-platform"
 version = "0.2.0-rc.1"
 dependencies = [
  "cairo-rs",
+ "javascriptcore-rs",
  "serde",
  "serde_json",
  "tauri",

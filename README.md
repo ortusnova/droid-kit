@@ -34,6 +34,11 @@ registry; everything comes from this repository.
 droid-kit-platform = { git = "https://github.com/ortusnova/droid-kit", tag = "v0.1.0" }
 ```
 
+`@droid-kit/ui` expects `@droid-kit/platform` and `@droid-kit/tokens` as peer
+dependencies, so an app lists both itself, at the same tag. Otherwise pnpm
+looks for them on the npm registry and fails with a 404. `dk new` writes all
+four kit packages for you.
+
 ## `dk`, the command-line tool
 
 Install it from a checkout of the kit, or straight from a tag:

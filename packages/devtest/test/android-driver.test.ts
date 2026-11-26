@@ -90,6 +90,8 @@ case "$args" in
   devices) printf 'List of devices attached\\n192.168.1.5:40000\\tdevice\\n' ;;
   *"dumpsys notification"*) cat ${dump} ;;
   *screencap*) head -c 4000 /dev/zero ;;
+  *\"dumpsys input_method\"*|*"dumpsys input_method"*) if [ -e ${dir}/keyboard ]; then echo "      mInputShown=true"; else echo "      mInputShown=false"; fi ;;
+  *KEYCODE_BACK*) rm -f ${dir}/keyboard ;;
   *pidof*) echo 1234 ;;
 esac
 `,
@@ -143,6 +145,18 @@ esac
     await d.waitForNotification({ id: 'swipe-once' });
     await d.waitForNotification({ title: 'verify swipe-daily' });
     await expect(d.waitForNotification({ id: 'nothing' }, { timeoutMs: 600 })).rejects.toThrow(/no notification for {"id":"nothing"}.*verify swipe-daily/);
+    await d.close();
+  });
+
+  it('closes the keyboard with Back only when it is showing', async () => {
+    const d = await createDriver(context);
+    expect(await d.hideKeyboard!()).toBe(false);
+    expect(calls().filter(c => c.includes('KEYCODE_BACK'))).toEqual([]);
+    writeFileSync(join(dir, 'keyboard'), '');
+    expect(await d.keyboardShown!()).toBe(true);
+    expect(await d.hideKeyboard!()).toBe(true);
+    expect(await d.keyboardShown!()).toBe(false);
+    expect(calls().filter(c => c.includes('KEYCODE_BACK'))).toHaveLength(1);
     await d.close();
   });
 

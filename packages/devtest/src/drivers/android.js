@@ -56,16 +56,27 @@ function pageHelpers() {
   };
 
   /**
+   * The nearest container the element scrolls in: a sheet's content (which scrolls although its overflow is hidden), or an
+   * ancestor with scrollable overflow (the app's main area, a list in a popover). Never the document.
+   * @param {HTMLElement} el
+   */
+  const scrollerOf = el => {
+    for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+      if (p.matches('.dk-sheet-content')) return p;
+      const overflow = getComputedStyle(p).overflowY;
+      if ((overflow === 'auto' || overflow === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+    }
+    return null;
+  };
+
+  /**
    * Scrolls the element's scroll container (never the document) until the element's middle is in its visible part.
    * With `place` (0 to 1) it goes to that fraction of the visible part, whatever it is now: a way out from under a fixed
    * control (the sheet's handle, the floating action button, the tab bar).
    * @param {HTMLElement} el @param {number} [place]
    */
   const reveal = async (el, place) => {
-    const scroller = el.closest('.dk-sheet-content') ?? (() => {
-      const main = document.querySelector('[data-scroll-restoration-id="main"]');
-      return main && main.contains(el) ? main : null;
-    })();
+    const scroller = scrollerOf(el);
     if (!scroller) return;
     const r = el.getBoundingClientRect();
     const s = scroller.getBoundingClientRect();
@@ -316,7 +327,7 @@ export async function createDriver(context) {
     clockBefore = { autoTime, autoZone, zone };
   };
 
-  /** @type {Driver & { setClock?: (epochMs: number) => Promise<void>, setZone?: (zone: string) => Promise<void>, beforeScenario(name: string): Promise<void> }} */
+  /** @type {Driver & { killProcess(): Promise<void>, keyboardShown(): Promise<boolean>, hideKeyboard(): Promise<boolean>, setClock?: (epochMs: number) => Promise<void>, setZone?: (zone: string) => Promise<void>, beforeScenario(name: string): Promise<void> }} */
   const driver = {
     target: context.target,
     capabilities: new Set(emulator ? ['realInput', 'notifications', 'reinstall', 'clock'] : ['realInput', 'notifications', 'reinstall']),
@@ -324,6 +335,10 @@ export async function createDriver(context) {
 
     async beforeScenario() {
       await awake();
+      // The last scenario may have left the app behind (Back from its first screen, a system prompt, a stopped process): a page that is not on the screen does not answer.
+      const resumed = await shell('dumpsys activity activities | grep -m1 -E "topResumedActivity|mResumedActivity"');
+      if (!resumed.includes(pkg)) await driver.restart();
+      else await driver.hideKeyboard();
     },
 
     async open(route) {
@@ -359,6 +374,8 @@ export async function createDriver(context) {
         await sleep(150);
       }
       await sleep(400);
+      // A touch puts the caret where it landed; typing here continues the text, as the other drivers do.
+      await evaluate(`(() => { const el = document.activeElement; if (el && typeof el.value === 'string' && el.setSelectionRange) try { el.setSelectionRange(el.value.length, el.value.length); } catch {} return true; })()`);
       await shell(`input text '${keys}'`);
       await sleep(300);
     },
@@ -453,6 +470,49 @@ export async function createDriver(context) {
       }
       writeFileSync(join(context.runDir, 'shade.xml'), xml);
       throw new Error(`the notification "${found.title}" is not in the shade (the screen's nodes are in shade.xml)`);
+    },
+
+    async killProcess() {
+      await ensureAwake();
+      // `am kill` ends only a process that is in the background; Home first. Unlike a force-stop it keeps the app's alarms, as the system's own kill does.
+      await shell('input keyevent KEYCODE_HOME');
+      await sleep(800);
+      await shell(`am kill ${pkg}`);
+      const until = Date.now() + 5000;
+      while (Date.now() < until && (await shell(`pidof ${pkg}`)).trim()) await sleep(200);
+      if ((await shell(`pidof ${pkg}`)).trim()) throw new Error(`${pkg} is still running after am kill`);
+    },
+
+    async keyboardShown() {
+      return (await shell('dumpsys input_method | grep -m1 mInputShown')).includes('mInputShown=true');
+    },
+
+    async hideKeyboard() {
+      if (!(await driver.keyboardShown())) return false;
+      await ensureAwake();
+      // Back goes to the keyboard first: it closes, and the sheet or screen under it stays.
+      await shell('input keyevent KEYCODE_BACK');
+      const until = Date.now() + 4000;
+      while (Date.now() < until && (await driver.keyboardShown())) await sleep(150);
+      await sleep(400);
+      return true;
+    },
+
+    async tapSystemButton(label, options = {}) {
+      await ensureAwake();
+      const until = Date.now() + (options.timeoutMs ?? 6000);
+      for (;;) {
+        const nodes = parseUiNodes(await uiDump());
+        const wanted = label.toLowerCase();
+        const target = nodes.find(n => n.clickable && (n.text.toLowerCase() === wanted || n.desc.toLowerCase() === wanted));
+        if (target) {
+          await shell(`input tap ${target.x} ${target.y}`);
+          await sleep(600);
+          return true;
+        }
+        if (Date.now() > until) return false;
+        await sleep(500);
+      }
     },
 
     async close() {

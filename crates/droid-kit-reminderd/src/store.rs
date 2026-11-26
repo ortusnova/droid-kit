@@ -12,7 +12,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::model::{Reminder, Repeat, parse_schedule};
+use crate::model::{Reminder, Repeat};
 
 const ATTEMPTS: usize = 5;
 
@@ -41,9 +41,17 @@ fn remove_delivered_with(path: &Path, delivered: &[Reminder], mut before_rename:
             Err(e) => return Err(e),
         };
         let seen = stamp(path);
-        let list = parse_schedule(&text).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-        let kept: Vec<&Reminder> = list.iter().filter(|r| !delivered.iter().any(|d| is_same_once(d, r))).collect();
-        let removed = list.len() - kept.len();
+        // Entries are kept as the JSON they were, so one this version cannot read is written back untouched.
+        let list: Vec<serde_json::Value> = serde_json::from_str(&text).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("reminders.json: {e}")))?;
+        let total = list.len();
+        let kept: Vec<&serde_json::Value> = list
+            .iter()
+            .filter(|entry| match serde_json::from_value::<Reminder>((*entry).clone()) {
+                Ok(r) => !delivered.iter().any(|d| is_same_once(d, &r)),
+                Err(_) => true,
+            })
+            .collect();
+        let removed = total - kept.len();
         if removed == 0 {
             return Ok(0);
         }
@@ -69,6 +77,7 @@ fn is_same_once(delivered: &Reminder, in_file: &Reminder) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::parse_schedule;
 
     struct Dir(PathBuf);
     impl Dir {
@@ -108,6 +117,17 @@ mod tests {
         assert_eq!(remove_delivered(&dir.file(), &[once("a", "18:30")]).unwrap(), 1);
         assert_eq!(ids(&dir.file()), vec!["d", "b"]);
         assert!(!temp_path(&dir.file()).exists(), "the temporary file is renamed away");
+    }
+
+    #[test]
+    fn an_entry_this_version_cannot_read_is_written_back_untouched() {
+        let dir = Dir::new("unknown");
+        let future = serde_json::json!({ "id": "f", "title": "t", "body": "b", "repeat": { "kind": "fortnightly", "time": "06:30", "extra": [1, 2] } });
+        let list = serde_json::json!([serde_json::to_value(once("a", "18:30")).unwrap(), future, serde_json::to_value(daily("d")).unwrap()]);
+        std::fs::write(dir.file(), serde_json::to_string_pretty(&list).unwrap()).unwrap();
+        assert_eq!(remove_delivered(&dir.file(), &[once("a", "18:30")]).unwrap(), 1);
+        let after: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dir.file()).unwrap()).unwrap();
+        assert_eq!(after, serde_json::json!([list[1].clone(), list[2].clone()]));
     }
 
     #[test]

@@ -23,7 +23,7 @@ use zbus::names::BusName;
 use zbus::{Connection, MatchRule, MessageStream, Variant, interface};
 
 use crate::dbus::{ApplicationProxy, LoginProxy, NotificationsProxy, POWERDEVIL_NAME, PowerManagementProxy};
-use crate::model::{Reminder, Repeat, parse_schedule};
+use crate::model::{Reminder, Repeat, parse_schedule_report};
 use crate::{due, names, store, wake};
 
 /// The longest the loop sleeps. The monotonic clock stops while the device is
@@ -296,8 +296,12 @@ impl Daemon {
         }
         self.force_reload = false;
         match std::fs::read_to_string(&path) {
-            Ok(text) => match parse_schedule(&text) {
-                Ok(list) => {
+            Ok(text) => match parse_schedule_report(&text) {
+                Ok(schedule) => {
+                    let list = schedule.reminders;
+                    for line in &schedule.skipped {
+                        log!("skipping a reminder this version cannot read: {line}");
+                    }
                     log!("schedule: {} reminder(s): {}", list.len(), list.iter().map(|r| r.id.as_str()).collect::<Vec<_>>().join(", "));
                     self.reminders = list;
                     self.file_stamp = stamp;

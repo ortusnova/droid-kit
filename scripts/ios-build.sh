@@ -60,7 +60,7 @@ step "1/5 web app: pnpm build"
 #    makes Tauri serve the built web app instead of the dev server.
 PATCH=()
 if [ -n "${KIT_LOCAL:-}" ]; then
-  for crate in droid-kit-platform droid-kit-reminders; do
+  for crate in $(ls "$KIT_LOCAL/crates" | grep '^droid-kit-'); do
     PATCH+=(--config "patch.'https://github.com/ortusnova/droid-kit'.$crate.path='$(realpath "$KIT_LOCAL")/crates/$crate'")
   done
 fi

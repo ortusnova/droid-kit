@@ -24,6 +24,14 @@ fn swift<R: Runtime>(app: &AppHandle<R>) -> Result<tauri::State<'_, Swift<R>>, R
 
 pub fn setup<R: Runtime>(app: &AppHandle<R>, api: PluginApi<R, ()>) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(Swift(api.register_ios_plugin(init_plugin_droid_kit_reminders)?));
+    // Tell the Swift part where reminders.json is, which also arms the next occurrences of the rules made of
+    // one-time triggers. Not awaited here: setup runs on the main thread, and Swift may answer from it.
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let Ok(store) = crate::store_path(&app) else { return };
+        let Ok(swift) = swift(&app) else { return };
+        let _ = swift.0.run_mobile_plugin_async::<()>("configure", ConfigureArgs { store: store.to_string_lossy().into_owned() }).await;
+    });
     Ok(())
 }
 
@@ -40,6 +48,13 @@ pub fn ensure_permission<R: Runtime>(app: &AppHandle<R>) -> Result<(), ReminderE
 #[derive(Serialize)]
 struct ScheduleArgs {
     reminder: String,
+    /// Where reminders.json is: the rules to arm again come from it.
+    store: String,
+}
+
+#[derive(Serialize)]
+struct ConfigureArgs {
+    store: String,
 }
 
 #[derive(Serialize)]
@@ -50,7 +65,8 @@ struct CancelArgs<'a> {
 pub fn schedule<R: Runtime>(app: &AppHandle<R>, reminder: &Reminder, _utc_offset_minutes: i32) -> Result<(), ReminderError> {
     // The device's calendar turns the local date and time into an instant, so the offset is not needed here.
     let reminder = serde_json::to_string(reminder).map_err(ReminderError::platform)?;
-    swift(app)?.0.run_mobile_plugin::<()>("schedule", ScheduleArgs { reminder }).map_err(ReminderError::platform)
+    let store = crate::store_path(app)?.to_string_lossy().into_owned();
+    swift(app)?.0.run_mobile_plugin::<()>("schedule", ScheduleArgs { reminder, store }).map_err(ReminderError::platform)
 }
 
 pub fn cancel<R: Runtime>(app: &AppHandle<R>, reminder_id: &str) -> Result<(), ReminderError> {

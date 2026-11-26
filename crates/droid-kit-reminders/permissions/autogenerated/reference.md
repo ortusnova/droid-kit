@@ -9,6 +9,8 @@ Schedule, cancel and list reminders
 - `allow-list`
 - `allow-capabilities`
 - `allow-take-opened`
+- `allow-register-listener`
+- `allow-remove-listener`
 
 ## Permission Table
 
@@ -93,6 +95,58 @@ Enables the list command without any pre-configured scope.
 <td>
 
 Denies the list command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`droid-kit-reminders:allow-register-listener`
+
+</td>
+<td>
+
+Enables the register_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`droid-kit-reminders:deny-register-listener`
+
+</td>
+<td>
+
+Denies the register_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`droid-kit-reminders:allow-remove-listener`
+
+</td>
+<td>
+
+Enables the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`droid-kit-reminders:deny-remove-listener`
+
+</td>
+<td>
+
+Denies the remove_listener command without any pre-configured scope.
 
 </td>
 </tr>

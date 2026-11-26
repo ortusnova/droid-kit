@@ -123,8 +123,8 @@ On `ios-phone` (no Mac, no Xcode install, no paid developer account):
   [xtool](https://xtool.sh) AppImage, `xtool auth login --mode password` with
   your Apple ID, `xtool sdk install <Xcode 26 .xip>` (the `.xip` from
   developer.apple.com, free Apple ID; xtool only takes the iOS SDK out of it),
-  `rustup target add aarch64-apple-ios`, `jq`, `usbmuxd`, and
-  `uv tool install pymobiledevice3`.
+  `rustup target add aarch64-apple-ios`, `jq`, `usbmuxd`, ImageMagick (`magick`,
+  for the app icon sizes), and `uv tool install pymobiledevice3`.
 - Once per iPhone: plug it in and trust the computer, install any app once,
   then Settings → General → VPN & Device Management → your Apple ID → Trust,
   and Settings → Privacy & Security → Developer Mode (the phone restarts). For

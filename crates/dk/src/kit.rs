@@ -29,6 +29,10 @@ pub fn local(app: &Path, kit: &Path) -> Result<ExitCode> {
     if !kit.join("packages").is_dir() || !kit.join("crates").is_dir() {
         bail!("{} does not look like a droid-kit checkout (no packages/ and crates/)", kit.display());
     }
+    // The linked packages resolve their own dependencies from the checkout.
+    if !kit.join("node_modules").is_dir() {
+        bail!("{} has no node_modules; run `pnpm install` in the kit checkout first", kit.display());
+    }
     if backup_dir(&app).exists() {
         bail!("already using a local kit; run `dk kit pin` first");
     }

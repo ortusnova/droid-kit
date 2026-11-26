@@ -6,6 +6,7 @@ mod config;
 mod doctor;
 mod kit;
 mod linux;
+mod new;
 mod proc;
 mod tokens;
 
@@ -37,6 +38,24 @@ enum Cmd {
         /// Debug builds on linux-desktop: open this route first, e.g. /components/demo.
         #[arg(long)]
         route: Option<String>,
+    },
+    /// Make a new app from the kit's template.
+    New {
+        /// The app's name: the npm package, the Rust crate and the Linux binary, e.g. life-droid.
+        name: String,
+        /// The application identifier, e.g. com.ortusnova.lifedroid.
+        #[arg(long)]
+        id: String,
+        /// Where to make the app: a new or existing directory, which may hold other files
+        /// but none the template would overwrite. Default: ./<name>.
+        #[arg(long)]
+        dir: Option<PathBuf>,
+        /// The launcher label and window title. Default: the name.
+        #[arg(long)]
+        title: Option<String>,
+        /// The kit tag to pin, e.g. v0.1.0-rc.1. Default: this dk's own version.
+        #[arg(long)]
+        kit_tag: Option<String>,
     },
     /// Check the app (or the kit, when run in the kit's repository).
     Check,
@@ -81,6 +100,7 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     let result = match cli.cmd {
         Cmd::Doctor => doctor::run(&cli.app),
+        Cmd::New { name, id, dir, title, kit_tag } => new::run(&name, &id, dir.as_deref(), title.as_deref(), kit_tag.as_deref()),
         Cmd::Check => check::run(&cli.app),
         Cmd::Kit { cmd: KitCmd::Local { path } } => kit::local(&cli.app, &path),
         Cmd::Kit { cmd: KitCmd::Pin } => kit::pin(&cli.app),

@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Android 12+: the system launch screen also takes the page background. -->
+    <style name="Theme.__DK_SNAKE__" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/dk_background</item>
+        <item name="android:windowSplashScreenBackground">@color/dk_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

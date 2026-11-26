@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["crates/*", "apps/gallery/src-tauri"]
+# The template is an app of its own, with placeholders in its manifests.
+exclude = ["template"]
 
 [workspace.package]
 version = "0.0.2"

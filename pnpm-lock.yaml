@@ -278,6 +278,10 @@ importers:
         version: 2.12.5
 
   packages/tokens:
+    dependencies:
+      daisyui:
+        specifier: 5.8.2
+        version: 5.8.2
     devDependencies:
       '@types/node':
         specifier: 26.6.10

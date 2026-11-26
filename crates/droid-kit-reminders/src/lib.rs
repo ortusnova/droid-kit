@@ -55,7 +55,12 @@ pub(crate) fn read_store<R: Runtime>(app: &AppHandle<R>) -> Result<Vec<Reminder>
 
 fn write_store<R: Runtime>(app: &AppHandle<R>, list: &[Reminder]) -> Result<(), ReminderError> {
     let json = serde_json::to_string_pretty(list).map_err(ReminderError::platform)?;
-    std::fs::write(store_path(app)?, json).map_err(ReminderError::platform)
+    let path = store_path(app)?;
+    // Write and rename, because the Android receiver and the Linux service
+    // rewrite the same file.
+    let tmp = path.with_extension("json.app.tmp");
+    std::fs::write(&tmp, json).map_err(ReminderError::platform)?;
+    std::fs::rename(&tmp, &path).map_err(ReminderError::platform)
 }
 
 /// Schedules a reminder, replacing any with the same id. Asks for the

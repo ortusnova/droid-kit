@@ -76,6 +76,27 @@ export function RemindersSection() {
           Daily, from 2 minutes
         </Button>
         <Button
+          id="remind-10min"
+          onPress={() => {
+            const at = inMinutes(10);
+            void run({ id: 'test-restart', title: 'droid-kit restart test', body: `Due at ${at.time}`, repeat: { kind: 'once', ...at } });
+          }}
+        >
+          In 10 minutes
+        </Button>
+        <Button
+          id="remind-0630"
+          onPress={() => void run({ id: 'test-0630', title: 'droid-kit 06:30', body: 'Every day at 06:30', repeat: { kind: 'daily', time: '06:30' } })}
+        >
+          Daily 06:30
+        </Button>
+        <Button
+          id="remind-weekly"
+          onPress={() => void run({ id: 'test-weekly', title: 'droid-kit weekly', body: 'Monday and Thursday at 06:30', repeat: { kind: 'weekly', weekdays: [1, 4], time: '06:30' } })}
+        >
+          Mon and Thu 06:30
+        </Button>
+        <Button
           id="remind-cancel"
           variant="ghost"
           onPress={async () => {

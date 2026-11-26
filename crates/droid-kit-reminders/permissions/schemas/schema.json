@@ -331,6 +331,30 @@
           "markdownDescription": "Denies the list command without any pre-configured scope."
         },
         {
+          "description": "Enables the register_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-register-listener",
+          "markdownDescription": "Enables the register_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the register_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-register-listener",
+          "markdownDescription": "Denies the register_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the remove_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-remove-listener",
+          "markdownDescription": "Enables the remove_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the remove_listener command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-remove-listener",
+          "markdownDescription": "Denies the remove_listener command without any pre-configured scope."
+        },
+        {
           "description": "Enables the schedule command without any pre-configured scope.",
           "type": "string",
           "const": "allow-schedule",
@@ -355,10 +379,10 @@
           "markdownDescription": "Denies the take_opened command without any pre-configured scope."
         },
         {
-          "description": "Schedule, cancel and list reminders\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-list`\n- `allow-capabilities`\n- `allow-take-opened`",
+          "description": "Schedule, cancel and list reminders\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-list`\n- `allow-capabilities`\n- `allow-take-opened`\n- `allow-register-listener`\n- `allow-remove-listener`",
           "type": "string",
           "const": "default",
-          "markdownDescription": "Schedule, cancel and list reminders\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-list`\n- `allow-capabilities`\n- `allow-take-opened`"
+          "markdownDescription": "Schedule, cancel and list reminders\n#### This default permission set includes:\n\n- `allow-schedule`\n- `allow-cancel`\n- `allow-list`\n- `allow-capabilities`\n- `allow-take-opened`\n- `allow-register-listener`\n- `allow-remove-listener`"
         }
       ]
     }

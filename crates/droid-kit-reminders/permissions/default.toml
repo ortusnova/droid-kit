@@ -1,3 +1,3 @@
 [default]
 description = "Schedule, cancel and list reminders"
-permissions = ["allow-schedule", "allow-cancel", "allow-list", "allow-capabilities", "allow-take-opened"]
+permissions = ["allow-schedule", "allow-cancel", "allow-list", "allow-capabilities", "allow-take-opened", "allow-register-listener", "allow-remove-listener"]

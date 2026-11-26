@@ -20,6 +20,11 @@ import java.util.Calendar
  * next occurrence on the device's calendar when one fires, so they keep their
  * wall-clock time across daylight-saving and time-zone changes.
  *
+ * Repeat rules: once, daily, weekly, monthly (a day 1 to 31; a month with
+ * fewer days takes its last day, so 31 means the last day) and yearly (a month
+ * and day; 29 February falls on 28 February in years without one). Any other
+ * kind is refused: logged and skipped, never treated as daily.
+ *
  * Not tauri-plugin-notification's scheduler: in 2.8.1 it reschedules each
  * later occurrence of a repeating notification as a plain RTC alarm, which
  * does not wake the device.
@@ -39,6 +44,8 @@ object Reminders {
     private const val EXTRA_JSON = "dk.reminder.json"
     private const val EXTRA_AT = "dk.reminder.at"
     private const val CHANNEL = "dk-reminders"
+    private const val TAG = "droid-kit-reminders"
+    private val KINDS = setOf("once", "daily", "weekly", "monthly", "yearly")
     private val lock = Any()
 
     /** reminders.json in the app's data directory, written by the Rust side. */
@@ -55,6 +62,14 @@ object Reminders {
         return PendingIntent.getBroadcast(context, requestCode(id), intent, flags or PendingIntent.FLAG_IMMUTABLE)
     }
 
+    /** Whether this build knows the reminder's repeat kind. An unknown one is logged and skipped by every path below. */
+    private fun supported(reminder: JSONObject): Boolean {
+        val kind = reminder.optJSONObject("repeat")?.optString("kind") ?: ""
+        if (kind in KINDS) return true
+        android.util.Log.w(TAG, "ignoring reminder ${reminder.optString("id")}: unknown repeat kind \"$kind\"")
+        return false
+    }
+
     /** The time rule of a reminder, as text: it changes when the app replaces the reminder with another rule. */
     private fun fingerprint(reminder: JSONObject): String {
         val repeat = reminder.getJSONObject("repeat")
@@ -64,13 +79,29 @@ object Reminders {
                 val arr = repeat.getJSONArray("weekdays")
                 "weekly ${(0 until arr.length()).map { arr.getInt(it) }.sorted().joinToString(",")} ${repeat.getString("time")}"
             }
-            else -> "daily ${repeat.getString("time")}"
+            "daily" -> "daily ${repeat.getString("time")}"
+            "monthly" -> "monthly ${repeat.getInt("day")} ${repeat.getString("time")}"
+            "yearly" -> "yearly ${repeat.getInt("month")} ${repeat.getInt("day")} ${repeat.getString("time")}"
+            else -> throw IllegalArgumentException("unknown repeat kind ${repeat.getString("kind")}")
         }
     }
 
     private fun isOnce(reminder: JSONObject): Boolean = reminder.getJSONObject("repeat").getString("kind") == "once"
 
-    /** The first occurrence strictly after `after`, or null if there is none. */
+    /**
+     * The occurrence of a monthly or yearly rule in one month, in the device's zone.
+     * `month` counts from 0. A day past the month's end becomes its last day.
+     */
+    private fun occurrence(year: Int, month: Int, day: Int, h: Int, m: Int): Long {
+        val cal = Calendar.getInstance()
+        cal.clear()
+        cal.set(year, month, 1)
+        val last = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+        cal.set(year, month, minOf(day, last), h, m, 0)
+        return cal.timeInMillis
+    }
+
+    /** The first occurrence strictly after `after`, or null if there is none (also for a kind this build does not know). */
     fun nextTrigger(reminder: JSONObject, after: Long): Long? {
         val repeat = reminder.getJSONObject("repeat")
         when (repeat.getString("kind")) {
@@ -104,14 +135,45 @@ object Reminders {
                 }
                 return null
             }
+            "monthly", "yearly" -> {
+                val (h, m) = repeat.getString("time").split(":").map { it.toInt() }
+                val day = repeat.getInt("day")
+                val yearly = repeat.getString("kind") == "yearly"
+                val month = if (yearly) repeat.getInt("month") - 1 else 0
+                val start = Calendar.getInstance()
+                start.timeInMillis = after
+                val year = start.get(Calendar.YEAR)
+                val startMonth = start.get(Calendar.MONTH)
+                // From the month (year) before: a time-zone change can put an occurrence of the previous one after `after`.
+                if (yearly) {
+                    for (y in year - 1..year + 8) {
+                        val t = occurrence(y, month, day, h, m)
+                        if (t > after) return t
+                    }
+                } else {
+                    for (i in -1..14) {
+                        val index = year * 12 + startMonth + i
+                        val t = occurrence(index / 12, index % 12, day, h, m)
+                        if (t > after) return t
+                    }
+                }
+                return null
+            }
         }
         return null
     }
 
+    /** The longest gap between two occurrences of a rule, in days: how far back a missed one can matter. */
+    private fun maxGapDays(reminder: JSONObject): Long = when (reminder.getJSONObject("repeat").getString("kind")) {
+        "yearly" -> 367
+        "monthly" -> 32
+        else -> 9
+    }
+
     /** The newest occurrence in (after, upto]: the one to deliver when several passed while nothing was armed. */
     fun latestIn(reminder: JSONObject, after: Long, upto: Long): Long? {
-        // Repeats are at most a week apart, so earlier ones never matter.
-        var cursor = maxOf(after, upto - 9L * 24 * 3600 * 1000)
+        // Only the newest missed occurrence is delivered, so look back no further than the rule's longest gap.
+        var cursor = maxOf(after, upto - maxGapDays(reminder) * 24 * 3600 * 1000)
         var last: Long? = null
         for (i in 0 until 16) {
             val t = nextTrigger(reminder, cursor)
@@ -158,6 +220,11 @@ object Reminders {
      */
     private fun sync(context: Context, reminder: JSONObject, state: JSONObject, now: Long) {
         val id = reminder.getString("id")
+        if (!supported(reminder)) {
+            disarm(context, id)
+            state.remove(id)
+            return
+        }
         val fp = fingerprint(reminder)
         var entry = state.optJSONObject(id)
         if (entry == null || entry.getString("fingerprint") != fp) {
@@ -215,7 +282,7 @@ object Reminders {
                 try {
                     sync(context, reminder, state, now)
                 } catch (e: Exception) {
-                    android.util.Log.w("droid-kit-reminders", "cannot restore ${reminder.optString("id")}: $e")
+                    android.util.Log.w(TAG, "cannot restore ${reminder.optString("id")}: $e")
                 }
             }
             // Reminders the app removed no longer count as seen.
@@ -254,6 +321,10 @@ object Reminders {
         val json = intent.getStringExtra(EXTRA_JSON) ?: return
         val reminder = JSONObject(json)
         val id = reminder.getString("id")
+        if (!supported(reminder)) {
+            disarm(context, id)
+            return
+        }
         synchronized(lock) {
             val now = System.currentTimeMillis()
             val at = intent.getLongExtra(EXTRA_AT, now)

@@ -12,6 +12,7 @@
   "dependencies": {
     "@droid-kit/platform": "workspace:*",
     "@droid-kit/reminders": "workspace:*",
+    "@droid-kit/store": "workspace:*",
     "@droid-kit/tokens": "workspace:*",
     "@droid-kit/ui": "workspace:*",
     "@internationalized/date": "3.12.4",

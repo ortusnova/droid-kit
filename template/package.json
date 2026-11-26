@@ -12,6 +12,7 @@
   "dependencies": {
     "@droid-kit/platform": "github:ortusnova/droid-kit#__DK_KIT_TAG__&path:/packages/platform",
     "@droid-kit/reminders": "github:ortusnova/droid-kit#__DK_KIT_TAG__&path:/packages/reminders",
+    "@droid-kit/store": "github:ortusnova/droid-kit#__DK_KIT_TAG__&path:/packages/store",
     "@droid-kit/tokens": "github:ortusnova/droid-kit#__DK_KIT_TAG__&path:/packages/tokens",
     "@droid-kit/ui": "github:ortusnova/droid-kit#__DK_KIT_TAG__&path:/packages/ui",
     "@tanstack/react-router": "1.170.46",

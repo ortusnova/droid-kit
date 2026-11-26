@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { dk, onThemeChange, setThemePreference, type ThemePreference } from '@droid-kit/platform';
+import { List, ListRow } from '@droid-kit/ui';
 import { RemindersSection } from './reminders-section';
 
 declare global {
@@ -57,6 +58,9 @@ export function PlatformPage() {
     <div style={{ padding: 24 }}>
       <div id="inset-probe" style={{ position: 'fixed', visibility: 'hidden', padding: 'var(--dk-inset-top) var(--dk-inset-right) var(--dk-inset-bottom) var(--dk-inset-left)' }} />
       <RemindersSection />
+      <List>
+        <ListRow title="Storage" subtitle="The app's database" href="/storage" />
+      </List>
       <h2>Theme</h2>
       <div>
         <button style={button} onClick={theme('system')}>System</button>

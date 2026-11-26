@@ -17,6 +17,7 @@ import { AppBar, AppShell, List, ListRow, RouteError, TabBar, ToastRegion } from
 import './app.css';
 import { PlatformPage } from './platform-page';
 import { DesignPage } from './design-page';
+import { StoragePage } from './storage-page';
 import { ENTRIES } from './components-registry';
 
 type Search = { sheet?: string };
@@ -30,6 +31,7 @@ const rootRoute = createRootRoute({
 });
 const platformRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: PlatformPage, staticData: { title: 'Platform', tab: 'platform' } });
 const designRoute = createRoute({ getParentRoute: () => rootRoute, path: '/design', component: DesignPage, staticData: { title: 'Design', tab: 'design' } });
+const storageRoute = createRoute({ getParentRoute: () => rootRoute, path: '/storage', component: StoragePage, staticData: { title: 'Storage', tab: 'platform', nested: true } });
 const componentsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/components', component: ComponentsPage, staticData: { title: 'Components', tab: 'components' } });
 const componentRoute = createRoute({ getParentRoute: () => rootRoute, path: '/components/$name', component: ComponentPage, staticData: { tab: 'components', nested: true } });
 
@@ -49,7 +51,7 @@ applyStartRoute();
 const router = createRouter({
   // A route that fails to render shows RouteError and reports DK_ERROR, so `dk run` names the failure.
   defaultErrorComponent: RouteError,
-  routeTree: rootRoute.addChildren([platformRoute, designRoute, componentsRoute, componentRoute]),
+  routeTree: rootRoute.addChildren([platformRoute, designRoute, storageRoute, componentsRoute, componentRoute]),
   scrollRestoration: true,
   // One scroll position per screen, whatever sheet is open over it.
   getScrollRestorationKey: location => location.pathname,

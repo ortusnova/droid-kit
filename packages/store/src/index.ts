@@ -42,6 +42,8 @@ export interface Store {
   readonly version: number;
   /** The SQLite library built into the app. */
   readonly sqliteVersion: string;
+  /** `wal` for a database file. */
+  readonly journalMode: string;
   /** This installation's identifier, made once and kept in the database (`_dk_meta`). */
   readonly deviceId: string;
   /** The clock the record helpers use, in milliseconds since 1970. */
@@ -84,6 +86,7 @@ export async function openStore(options: OpenOptions): Promise<Store> {
     path: info.path,
     version: info.version,
     sqliteVersion: info.sqliteVersion,
+    journalMode: info.journalMode,
     deviceId,
     now: clock,
     select: async <T = Row>(sql: string, params: Param[] = []) => (await backend.select(sql, params)) as unknown as T[],

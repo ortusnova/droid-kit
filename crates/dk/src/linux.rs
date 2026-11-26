@@ -70,6 +70,26 @@ fn uses_reminders(app: &App) -> bool {
     fs::read_to_string(app.dir.join("src-tauri/Cargo.toml")).is_ok_and(|t| t.contains("droid-kit-reminders"))
 }
 
+/// Whether the app uses the kit's store plugin, which keeps its database in the app's data directory.
+fn uses_store(app: &App) -> bool {
+    fs::read_to_string(app.dir.join("src-tauri/Cargo.toml")).is_ok_and(|t| t.contains("droid-kit-store"))
+}
+
+/// `$XDG_DATA_HOME` (default `~/.local/share`) and the app's directory in it, `<identifier>`.
+fn data_dirs(home: &Path, xdg_data_home: Option<PathBuf>, identifier: &str) -> (PathBuf, PathBuf) {
+    let data_home = xdg_data_home.filter(|p| !p.as_os_str().is_empty()).unwrap_or_else(|| home.join(".local/share"));
+    let data = data_home.join(identifier);
+    (data_home, data)
+}
+
+/// The app's real data directory, mounted at its own path with `XDG_DATA_HOME` set, so what the
+/// app keeps there (the store's database, the reminders file) survives the container.
+fn data_dir_args(app: &App) -> Result<Vec<String>> {
+    let (data_home, data) = data_dirs(&home()?, std::env::var_os("XDG_DATA_HOME").map(PathBuf::from), &app.identifier);
+    fs::create_dir_all(&data)?;
+    Ok(vec!["-v".into(), format!("{0}:{0}", data.display()), "-e".into(), format!("XDG_DATA_HOME={}", data_home.display())])
+}
+
 /// Run in the build image from the app's directory. The service is a package of
 /// the kit's workspace, which the app reaches only as a dependency of the
 /// reminders plugin (a git checkout of the kit's tag, or the local checkout
@@ -126,29 +146,23 @@ fn home() -> Result<PathBuf> {
 /// `dk run` does, for a tap on a notification when the app is closed.
 fn reminders_args(app: &App, base: &[String], binary: &Path) -> Result<Vec<String>> {
     let home = home()?;
-    let data_home = std::env::var_os("XDG_DATA_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| home.join(".local/share"));
-    let data = data_home.join(&app.identifier);
     let units = std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).unwrap_or_else(|| home.join(".config")).join("systemd/user");
-    fs::create_dir_all(&data)?;
     fs::create_dir_all(&units)?;
 
     let launch_dir = PathBuf::from(cache_dir()?).join("launch");
     fs::create_dir_all(&launch_dir)?;
     let launcher = launch_dir.join(format!("{}.sh", app.identifier));
 
-    let (data, data_home, units) = (data.display(), data_home.display(), units.display());
-    let extra = vec![
+    let units = units.display();
+    let mut extra = data_dir_args(app)?;
+    extra.extend([
         "-v".to_string(),
-        format!("{data}:{data}"),
-        "-e".into(),
-        format!("XDG_DATA_HOME={data_home}"),
-        "-v".into(),
         format!("{units}:{units}"),
         "-e".into(),
         format!("DK_SYSTEMD_USER_DIR={units}"),
         "-e".into(),
         format!("DK_REMINDER_LAUNCHER={}", launcher.display()),
-    ];
+    ]);
     let words: Vec<String> = base.iter().chain(&extra).map(|a| shell_quote(a)).collect();
     fs::write(
         &launcher,
@@ -268,6 +282,9 @@ pub fn run_desktop(app: &App, timeout: u64, route: Option<&str>) -> Result<ExitC
         // The launcher starts the app again for a tap on a notification: no start route or screenshot there.
         let extra = reminders_args(app, &args, &binary)?;
         args.extend(extra);
+    } else if uses_store(app) {
+        // The reminders arguments include this; an app with only a database needs just the directory.
+        args.extend(data_dir_args(app)?);
     }
     if let Some(route) = route {
         args.extend(["-e".to_string(), format!("DK_START_ROUTE={route}")]);
@@ -349,6 +366,14 @@ mod tests {
         };
         assert_eq!(locale_args(env), ["-e", "LANG=en_US.utf8", "-e", "LC_TIME=en_GB.UTF-8"]);
         assert!(locale_args(|_| None).is_empty());
+    }
+
+    #[test]
+    fn the_data_directory_is_xdg_data_home_slash_identifier() {
+        let home = Path::new("/home/brian");
+        assert_eq!(data_dirs(home, None, "com.ortusnova.x"), (PathBuf::from("/home/brian/.local/share"), PathBuf::from("/home/brian/.local/share/com.ortusnova.x")));
+        assert_eq!(data_dirs(home, Some(PathBuf::new()), "a.b").1, PathBuf::from("/home/brian/.local/share/a.b"));
+        assert_eq!(data_dirs(home, Some("/data".into()), "a.b"), (PathBuf::from("/data"), PathBuf::from("/data/a.b")));
     }
 
     #[test]

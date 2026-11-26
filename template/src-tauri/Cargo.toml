@@ -17,6 +17,7 @@ tauri-build = "=2.7.6"
 tauri = "=2.12.7"
 droid-kit-platform = { git = "https://github.com/ortusnova/droid-kit", tag = "__DK_KIT_TAG__" }
 droid-kit-reminders = { git = "https://github.com/ortusnova/droid-kit", tag = "__DK_KIT_TAG__" }
+droid-kit-store = { git = "https://github.com/ortusnova/droid-kit", tag = "__DK_KIT_TAG__" }
 # The reminders plugin asks for the notification permission through this one.
 tauri-plugin-notification = "=2.8.1"
 

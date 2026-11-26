@@ -197,6 +197,9 @@ importers:
       '@droid-kit/reminders':
         specifier: workspace:*
         version: link:../../packages/reminders
+      '@droid-kit/store':
+        specifier: workspace:*
+        version: link:../../packages/store
       '@droid-kit/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens

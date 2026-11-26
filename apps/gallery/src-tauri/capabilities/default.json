@@ -9,6 +9,7 @@
     "core:default",
     "notification:default",
     "droid-kit-platform:default",
-    "droid-kit-reminders:default"
+    "droid-kit-reminders:default",
+    "droid-kit-store:default"
   ]
 }

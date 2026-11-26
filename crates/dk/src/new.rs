@@ -226,6 +226,10 @@ mod tests {
         assert!(cargo.contains(r#"name = "life-droid""#));
         assert!(cargo.contains(r#"name = "life_droid_lib""#));
         assert!(cargo.contains(r#"droid-kit-reminders = { git = "https://github.com/ortusnova/droid-kit", tag = "v0.1.0" }"#));
+        assert!(cargo.contains(r#"droid-kit-store = { git = "https://github.com/ortusnova/droid-kit", tag = "v0.1.0" }"#));
+        assert!(pkg.contains("github:ortusnova/droid-kit#v0.1.0&path:/packages/store"));
+        assert!(text(&files, "src-tauri/capabilities/default.json").contains("droid-kit-store:default"));
+        assert!(text(&files, "src-tauri/src/lib.rs").contains("droid_kit_store::init()"));
         let conf = text(&files, "src-tauri/tauri.conf.json");
         assert!(conf.contains(r#""identifier": "com.ortusnova.lifedroid""#));
         assert!(conf.contains(r#""productName": "life-droid""#));

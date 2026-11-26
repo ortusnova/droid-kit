@@ -34,12 +34,14 @@ To work on the kit and this app together: `dk kit local <path to the kit>`
   back, then leave the app. `defaultErrorComponent: RouteError` makes a route
   that fails to render show up in `dk run` as `DK_ERROR`.
 - `src/app-info.ts`: the name, title and identifier, filled in by `dk new`.
-- `src-tauri/`: the Tauri app. Both kit plugins are registered in `src/lib.rs`;
-  their permissions are in `capabilities/default.json`.
+- `src/store.ts`: the app's local database, `@droid-kit/store`. Add SQL scripts
+  to `migrations`; the kit's README, "Storage", says how.
+- `src-tauri/`: the Tauri app. The kit plugins (platform, reminders, store) are
+  registered in `src/lib.rs`; their permissions are in `capabilities/default.json`.
 - `src-tauri/gen/android/`: the Android project, committed. Its launch screen
   and window background use the kit's colours (`@color/dk_background`), and
   the reminders permissions and receivers are added by the reminders plugin's
   own manifest.
 - Upgrading the kit: change the tag in `package.json` and in
   `src-tauri/Cargo.toml` (`dk check` fails if they differ), then
-  `pnpm install` and `cargo update -p droid-kit-platform -p droid-kit-reminders`.
+  `pnpm install` and `cargo update -p droid-kit-platform -p droid-kit-reminders -p droid-kit-store`.

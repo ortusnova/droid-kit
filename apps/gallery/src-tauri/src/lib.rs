@@ -17,6 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(droid_kit_platform::init())
         .plugin(droid_kit_reminders::init())
+        .plugin(droid_kit_store::init())
         .invoke_handler(tauri::generate_handler![save_token_choices])
         .run(tauri::generate_context!())
         .expect("error while running the gallery");

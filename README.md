@@ -1,7 +1,7 @@
 # droid-kit
 
 A shared kit for Tauri v2 mobile apps on Android and Linux phones: design
-tokens, React components, a platform plugin, a reminders plugin, an app
+tokens, React components, a platform plugin, a reminders plugin, a storage plugin, an app
 template, a component gallery and a command-line tool, `dk`.
 
 The look is daisyUI on Tailwind CSS 4, with the Tailwind Blue · Zinc palette.
@@ -14,7 +14,8 @@ packages/tokens      @droid-kit/tokens     token source and generated outputs
 packages/ui          @droid-kit/ui         React components and kit.css
 packages/platform    @droid-kit/platform   platform layer: form factor, insets, theme, engine check
 packages/reminders   @droid-kit/reminders  reminders API
-crates/              Rust crates: tokens, the platform and reminders plugins, the Linux reminders service, dk
+packages/store       @droid-kit/store      local SQLite storage, migrations, record helpers
+crates/              Rust crates: tokens, the platform, reminders and store plugins, the Linux reminders service, dk
 apps/gallery         every component, and the pages where design options are chosen
 template/            what `dk new` copies
 ```
@@ -104,6 +105,9 @@ On `linux-desktop`:
   platform plugin sets it when the app is built. Do not set Tauri's
   `app.enableGTKAppId`: it makes GTK own the identifier on the session bus,
   where the reminders plugin owns it already.
+- An app that uses the store or the reminders plugin gets its real data directory,
+  `$XDG_DATA_HOME/<identifier>`, mounted at its own path, so the database and
+  the reminders file outlive the container.
 - A container of an earlier run (`dk-<app>`, running or crashed) is removed
   before the build and again before the start.
 - The host's locale variables (`LANG`, `LC_*`, `LANGUAGE`) go into the
@@ -169,6 +173,93 @@ image = "localhost/droid-kit-linux:latest"  # built from containers/linux-build 
   first.
 - The phone must be awake or have no PIN. `dk run android-phone` wakes it and
   lifts the keyguard, which works only without a PIN.
+
+## Storage
+
+`@droid-kit/store` gives an app one local SQLite database. The file is
+`<name>.db` in the app's data directory (Android: the app's `dataDir`; Linux:
+`$XDG_DATA_HOME/<identifier>`, which `dk run linux-desktop` keeps between runs).
+It survives restarts, kills and updates; only uninstalling or clearing the app's
+data removes it. SQLite 3.54 is built into the app by the `droid-kit-store`
+crate (`rusqlite`, `bundled`), so no system library is needed on Android or on
+musl. Both are registered by the template: `droid_kit_store::init()` in
+`src-tauri/src/lib.rs`, and `droid-kit-store:default` in `capabilities/`. An
+app made before the kit had storage adds the crate, the npm package, the plugin
+and the capability by hand.
+
+<!-- store-example -->
+```ts
+import { RECORD_COLUMNS, deleteRecord, insertRecord, insertStatement, openStore, selectRecords, updateStatement, type RecordFields } from '@droid-kit/store';
+
+// Script n runs once, together with `PRAGMA user_version = n`. Add to the end; never edit a shipped one.
+const migrations = [
+  `CREATE TABLE habit (${RECORD_COLUMNS}, name TEXT NOT NULL, rank REAL NOT NULL)`,
+  `CREATE TABLE outcome (${RECORD_COLUMNS}, habit_id TEXT NOT NULL REFERENCES habit(id), day TEXT NOT NULL, kind TEXT NOT NULL)`,
+];
+
+type Habit = RecordFields & { name: string; rank: number };
+
+export async function example() {
+  const store = await openStore({ name: 'life', migrations });
+
+  // A record: the store adds id, created_at, updated_at and device_id.
+  const run = await insertRecord(store, 'habit', { name: 'Morning run', rank: 1 });
+
+  // A batch is one transaction: both statements are stored, or neither is.
+  const done = insertStatement(store, 'outcome', { habit_id: run.id, day: '2026-11-26', kind: 'done' });
+  await store.batch([done.statement, updateStatement(store, 'habit', run.id, { rank: 2 })]);
+
+  // Reads leave out deleted records; a deletion keeps the row with deleted_at set.
+  const habits = await selectRecords<Habit>(store, 'habit', { orderBy: 'rank' });
+  await deleteRecord(store, 'habit', run.id);
+  return habits;
+}
+```
+
+- **`openStore({ name, migrations })`** opens the database, creating it, and
+  applies the migrations it has not had. It is safe to call again (a page
+  reload). `store.path`, `store.version`, `store.sqliteVersion`,
+  `store.journalMode` and `store.deviceId` describe it.
+- **Migrations** are an ordered list of plain SQL scripts. Script *n* runs once,
+  on the databases that have not had it, in one transaction together with
+  `PRAGMA user_version = n`. If a script fails, everything it did is rolled back,
+  the version and the data are unchanged, and `openStore` rejects with a
+  `StoreError` of kind `migration` that names the script. A script must not
+  contain `BEGIN` or `COMMIT`, and must not be empty or only comments: SQLite
+  refuses that, and the kit reports it as `migration` before any script runs.
+  A database from a newer build (a higher version than the app has scripts) is
+  refused as `too-new` and left alone.
+- **Reads and writes.** `store.select<T>(sql, params)` returns rows as objects.
+  `store.execute(sql, params)` runs one statement and gives `rowsAffected`.
+  Parameters (`?`) are `null`, booleans (stored as 0 or 1), numbers or strings;
+  columns come back as `null`, numbers or strings. A BLOB column is an error,
+  and so is more than one statement per call. Integers are exact up to 2^53,
+  far beyond a timestamp in milliseconds.
+- **Batches are the transactions.** `store.batch([{ sql, params }, …])` runs the
+  statements in one transaction on the one connection: all are stored, or none
+  are, also if the app is killed partway. There is no `BEGIN` across calls, so
+  nothing is left open between two of them. Do the reads you need first, then
+  send the writes as one batch.
+- **Records ready for sync.** A table made with `RECORD_COLUMNS` has `id` (a
+  UUIDv7, so ids sort by creation time), `created_at`, `updated_at` (ms since
+  1970, UTC), `device_id` (the installation that last changed the row) and
+  `deleted_at`. `insertRecord`, `updateRecord`, `deleteRecord` and
+  `restoreRecord` stamp them, and have `…Statement` forms to put in a batch.
+  `updated_at` is always later than the value before it, even if the clock
+  stood still or went back. A deletion leaves the row, with `deleted_at` set;
+  `selectRecords` and `getRecord` leave deleted rows out unless
+  `includeDeleted` is set. Table and column names given to the helpers must be
+  plain identifiers. A later sync can merge two devices by `id`, last writer
+  winning on `updated_at`.
+- **The device id** is made once per installation and kept in the store's own
+  table `_dk_meta`, which the app's migrations do not make.
+- **Limits.** One database per app (a second `openStore` with another name is
+  refused). A name is 1 to 64 letters, digits, `_` or `-`.
+- **Tests without Tauri.** `import { memoryBackend } from '@droid-kit/store/test'`
+  and pass it as `backend`: `openStore({ name: 'test', migrations, backend: memoryBackend() })`.
+  It is Node's built-in SQLite (`node:sqlite`) with the same rules as the crate.
+  `memoryBackend({ path })` keeps a file, to test a restart; `now` in the
+  options sets the clock the record helpers stamp with.
 
 ## Releasing
 

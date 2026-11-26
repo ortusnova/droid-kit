@@ -18,7 +18,7 @@ export const commands = {
 	/**  Runs one statement and returns how many rows it changed. */
 	execute: (sql: string, params: Param[], options?: InvokeOptions) => __TAURI_INVOKE<number>("plugin:droid-kit-store|execute", { sql, params }, options),
 	/**  Runs the statements in one transaction: all of them, or none. */
-	batch: (statements: Statement_Deserialize[], options?: InvokeOptions) => __TAURI_INVOKE<null>("plugin:droid-kit-store|batch", { statements }, options),
+	batch: (statements: Statement[], options?: InvokeOptions) => __TAURI_INVOKE<null>("plugin:droid-kit-store|batch", { statements }, options),
 };
 
 /* Types */
@@ -36,16 +36,7 @@ export type Row = { [key in string]: Scalar };
 export type Scalar = null | boolean | number | null | string;
 
 /**  One statement of a batch: SQL with `?` placeholders and its parameters. */
-export type Statement = Statement_Serialize | Statement_Deserialize;
-
-/**  One statement of a batch: SQL with `?` placeholders and its parameters. */
-export type Statement_Deserialize = {
-	sql: string,
-	params?: Param[],
-};
-
-/**  One statement of a batch: SQL with `?` placeholders and its parameters. */
-export type Statement_Serialize = {
+export type Statement = {
 	sql: string,
 	params: Param[],
 };

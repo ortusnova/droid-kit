@@ -69,6 +69,26 @@ export interface Driver {
   setClock?(epochMs: number): Promise<void>;
   /** Set the device's time zone (an IANA name). Present with the `clock` capability; `close()` restores the zone. */
   setZone?(zone: string): Promise<void>;
+  /**
+   * Ends the app's process the way the system does when it needs the memory, keeping what the app scheduled with the
+   * system. A force-stop does not: on Android it cancels the app's alarms, so a scenario about a reminder that is
+   * delivered while the app is not running uses this where it exists. Android: Home, then `am kill`.
+   */
+  killProcess?(): Promise<void>;
+  /** Whether the on-screen keyboard is showing. Android only. */
+  keyboardShown?(): Promise<boolean>;
+  /**
+   * Closes the on-screen keyboard if it is showing, and returns whether it was. Android: the Back key, which goes to the
+   * keyboard first. A tap on a button while the keyboard is up can be lost: the WebView scrolls the sheet back to the
+   * focused field at the touch, and the button moves from under the finger.
+   */
+  hideKeyboard?(): Promise<boolean>;
+  /**
+   * Taps a button of the operating system's own UI (a permission prompt) by its label, looking for it for up to
+   * `timeoutMs` (default 6 s). Returns false when no such button appeared, so a step can allow a prompt that shows
+   * only the first time. Android only.
+   */
+  tapSystemButton?(label: string, options?: { timeoutMs?: number }): Promise<boolean>;
   /** Release whatever the driver holds (sockets, forwards), and put back what a scenario changed (the clock). */
   close(): Promise<void>;
 }

@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application>
+        <!-- Watches the activities' intents from the start of the process, for the id of a tapped reminder. -->
+        <provider android:name="com.ortusnova.droidkit.reminders.ReminderTapInit" android:authorities="${applicationId}.dk-reminders-tap" android:exported="false" />
         <receiver android:name="com.ortusnova.droidkit.reminders.ReminderReceiver" android:exported="false" />
         <receiver android:name="com.ortusnova.droidkit.reminders.ReminderRestoreReceiver" android:exported="false">
             <intent-filter>

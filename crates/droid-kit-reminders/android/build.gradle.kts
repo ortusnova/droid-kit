@@ -28,5 +28,7 @@ kotlin {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.9.0")
+    // The app brings its own (activity-ktx); this is only for the compiler.
+    compileOnly("androidx.activity:activity:1.10.1")
     implementation(project(":tauri-android"))
 }

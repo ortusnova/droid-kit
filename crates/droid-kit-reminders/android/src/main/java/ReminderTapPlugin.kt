@@ -31,11 +31,16 @@ class CancelArgs {
  */
 @TauriPlugin
 class ReminderTapPlugin(private val activity: Activity) : Plugin(activity) {
-    private var tapped: String? = null
+    /**
+     * The page has asked with `takeTapped` at least once, so it listens for the `tapped` event. Until then a tap
+     * is kept for `takeTapped` ([ReminderTaps]).
+     */
+    @Volatile
+    var pageAsked = false
 
     override fun load(webView: WebView) {
         super.load(webView)
-        activity.intent?.let { remember(it, notify = false) }
+        ReminderTaps.attach(this)
         // A force-stop removes every alarm, and a reminder may have come due while the app was closed:
         // bring them up to date. Off the main thread, because it reads and writes files; it never calls Rust.
         val context = activity.applicationContext
@@ -48,23 +53,11 @@ class ReminderTapPlugin(private val activity: Activity) : Plugin(activity) {
         }.start()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        remember(intent, notify = true)
-    }
-
-    private fun remember(intent: Intent, notify: Boolean) {
-        val id = intent.getStringExtra(Reminders.EXTRA_ID) ?: return
-        intent.removeExtra(Reminders.EXTRA_ID)
-        if (notify) {
-            // The app is running: tell the page now.
-            val event = JSObject()
-            event.put("id", id)
-            trigger("tapped", event)
-        } else {
-            // Cold start: the page asks with takeTapped once it is ready.
-            tapped = id
-        }
+    /** A tap while the page listens: tell it now. */
+    fun sendTapped(id: String) {
+        val event = JSObject()
+        event.put("id", id)
+        trigger("tapped", event)
     }
 
     @Command
@@ -103,8 +96,7 @@ class ReminderTapPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun takeTapped(invoke: Invoke) {
         val result = JSObject()
-        result.put("id", tapped)
-        tapped = null
+        result.put("id", ReminderTaps.take(this))
         invoke.resolve(result)
     }
 }

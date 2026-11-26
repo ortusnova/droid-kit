@@ -133,7 +133,20 @@ object Reminders {
         val reminder = JSONObject(json)
         show(context, reminder)
         // Repeating reminders: the next occurrence, from the calendar as it is now.
-        if (reminder.getJSONObject("repeat").getString("kind") != "once") schedule(context, reminder)
+        if (reminder.getJSONObject("repeat").getString("kind") != "once") schedule(context, reminder) else forget(context, reminder.getString("id"))
+    }
+
+    /** Takes a one-time reminder that has fired out of the stored list, so `list` shows only what is still scheduled. */
+    private fun forget(context: Context, id: String) {
+        val file = storeFile(context)
+        if (!file.exists()) return
+        val list = JSONArray(file.readText())
+        val kept = JSONArray()
+        for (i in 0 until list.length()) if (list.getJSONObject(i).getString("id") != id) kept.put(list.getJSONObject(i))
+        if (kept.length() == list.length()) return
+        val temp = File(file.parentFile, "reminders.json.tmp")
+        temp.writeText(kept.toString(2))
+        temp.renameTo(file)
     }
 }
 

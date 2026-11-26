@@ -6,9 +6,9 @@
       "$value": {
         "colorSpace": "srgb",
         "components": [
-          1.0,
-          1.0,
-          1.0
+          1,
+          1,
+          1
         ],
         "hex": "#ffffff"
       },
@@ -81,9 +81,9 @@
       "$value": {
         "colorSpace": "srgb",
         "components": [
-          1.0,
-          1.0,
-          1.0
+          1,
+          1,
+          1
         ],
         "hex": "#ffffff"
       },
@@ -212,17 +212,17 @@
         ],
         "hex": "#155dfc"
       },
-      "$description": "The brand colour as a fill: primary buttons, selected checkboxes and segments, focus rings. Tailwind blue-600 light, blue-500 dark. At least 3:1 against surfaces as a non-text indicator; for accent-coloured text use accent-text.",
+      "$description": "The brand colour as a fill: primary buttons, selected checkboxes and segments, focus rings. Tailwind blue-600 in both modes. At least 3:1 against surfaces as a non-text indicator; for accent-coloured text use accent-text. Chosen by Brian on 2026-11-25: Dark mode: text on the accent → White on blue-600.",
       "$extensions": {
         "com.ortusnova.droidkit": {
           "dark": {
             "colorSpace": "srgb",
             "components": [
-              0.1686,
-              0.498,
-              1.0
+              0.0824,
+              0.3647,
+              0.9882
             ],
-            "hex": "#2b7fff"
+            "hex": "#155dfc"
           }
         }
       }
@@ -231,23 +231,23 @@
       "$value": {
         "colorSpace": "srgb",
         "components": [
-          1.0,
-          1.0,
-          1.0
+          1,
+          1,
+          1
         ],
         "hex": "#ffffff"
       },
-      "$description": "Text and icons on the accent. Dark mode is an open choice (black here, or white on a deeper accent).",
+      "$description": "Text and icons on the accent. Dark mode is an open choice (black here, or white on a deeper accent). Chosen by Brian on 2026-11-25: Dark mode: text on the accent → White on blue-600.",
       "$extensions": {
         "com.ortusnova.droidkit": {
           "dark": {
             "colorSpace": "srgb",
             "components": [
-              0.0,
-              0.0,
-              0.0
+              1,
+              1,
+              1
             ],
-            "hex": "#000000"
+            "hex": "#ffffff"
           }
         }
       }
@@ -270,7 +270,7 @@
             "components": [
               0.1686,
               0.498,
-              1.0
+              1
             ],
             "hex": "#2b7fff"
           }
@@ -320,7 +320,7 @@
             "components": [
               0.7451,
               0.8588,
-              1.0
+              1
             ],
             "hex": "#bedbff"
           }
@@ -331,7 +331,7 @@
       "$value": {
         "colorSpace": "srgb",
         "components": [
-          0.0,
+          0,
           0.6,
           0.4
         ],
@@ -343,7 +343,7 @@
           "dark": {
             "colorSpace": "srgb",
             "components": [
-              0.0,
+              0,
               0.7373,
               0.4902
             ],
@@ -383,7 +383,7 @@
         "components": [
           0.9961,
           0.6039,
-          0.0
+          0
         ],
         "hex": "#fe9a00"
       },
@@ -393,9 +393,9 @@
           "dark": {
             "colorSpace": "srgb",
             "components": [
-              1.0,
+              1,
               0.7255,
-              0.0
+              0
             ],
             "hex": "#ffb900"
           }
@@ -432,7 +432,7 @@
         "colorSpace": "srgb",
         "components": [
           0.9059,
-          0.0,
+          0,
           0.0431
         ],
         "hex": "#e7000b"
@@ -456,9 +456,9 @@
       "$value": {
         "colorSpace": "srgb",
         "components": [
-          1.0,
-          1.0,
-          1.0
+          1,
+          1,
+          1
         ],
         "hex": "#ffffff"
       },

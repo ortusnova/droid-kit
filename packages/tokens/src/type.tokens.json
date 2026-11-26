@@ -21,31 +21,36 @@
         "$value": {
           "value": 0.75,
           "unit": "rem"
-        }
+        },
+        "$description": "Chosen by Brian on 2026-11-25: Type size → Tailwind default."
       },
       "small": {
         "$value": {
           "value": 0.875,
           "unit": "rem"
-        }
+        },
+        "$description": "Chosen by Brian on 2026-11-25: Type size → Tailwind default."
       },
       "body": {
         "$value": {
           "value": 1,
           "unit": "rem"
-        }
+        },
+        "$description": "Chosen by Brian on 2026-11-25: Type size → Tailwind default."
       },
       "title": {
         "$value": {
           "value": 1.25,
           "unit": "rem"
-        }
+        },
+        "$description": "Chosen by Brian on 2026-11-25: Type size → Tailwind default."
       },
       "headline": {
         "$value": {
           "value": 1.5,
           "unit": "rem"
-        }
+        },
+        "$description": "Chosen by Brian on 2026-11-25: Type size → Tailwind default."
       }
     },
     "weight": {

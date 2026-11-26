@@ -34,8 +34,8 @@ pub mod dark {
     pub const CONTROL_BORDER: &str = "#71717b";
     pub const TEXT: &str = "#fafafa";
     pub const TEXT_MUTED: &str = "#9f9fa9";
-    pub const ACCENT: &str = "#2b7fff";
-    pub const ON_ACCENT: &str = "#000000";
+    pub const ACCENT: &str = "#155dfc";
+    pub const ON_ACCENT: &str = "#ffffff";
     pub const ACCENT_TEXT: &str = "#2b7fff";
     pub const ACCENT_SOFT: &str = "#152745";
     pub const ON_ACCENT_SOFT: &str = "#bedbff";

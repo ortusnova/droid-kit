@@ -82,3 +82,22 @@ export function from12Hour(hour: number, minute: number, pm: boolean): Time {
   const h = (hour % 12) + (pm ? 12 : 0);
   return new Time(h, minute);
 }
+
+/** Clockwise angle from 12 o'clock, in radians [0, 2π), of a point relative to the dial's centre (y down). */
+export function dialAngle(dx: number, dy: number): number {
+  const a = Math.atan2(dx, -dy);
+  return a < 0 ? a + 2 * Math.PI : a;
+}
+
+/** The minute at an angle on the dial, rounded to the minute step. */
+export function dialMinute(angle: number, step: 1 | 5): number {
+  const m = Math.round((angle / (2 * Math.PI)) * 60);
+  return (Math.round(m / step) * step) % 60;
+}
+
+/** The hour at an angle: 1–12 on the outer ring; on a 24-hour dial the inner ring is 0 and 13–23. */
+export function dialHour(angle: number, innerRing: boolean): number {
+  const i = Math.round((angle / (2 * Math.PI)) * 12) % 12;
+  if (innerRing) return i === 0 ? 0 : i + 12;
+  return i === 0 ? 12 : i;
+}

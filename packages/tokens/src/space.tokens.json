@@ -4,10 +4,10 @@
     "$description": "Spacing. Tailwind's spacing unit: every spacing utility is a multiple of it.",
     "unit": {
       "$value": {
-        "value": 0.25,
+        "value": 0.21875,
         "unit": "rem"
       },
-      "$description": "Tailwind --spacing: p-4 = 4 × unit."
+      "$description": "Tailwind --spacing: p-4 = 4 × unit. Chosen by Brian on 2026-11-25: Spacing → Compact."
     },
     "touch-target": {
       "$value": {

@@ -9,8 +9,8 @@
     <color name="dk_control_border">#71717b</color>
     <color name="dk_text">#fafafa</color>
     <color name="dk_text_muted">#9f9fa9</color>
-    <color name="dk_accent">#2b7fff</color>
-    <color name="dk_on_accent">#000000</color>
+    <color name="dk_accent">#155dfc</color>
+    <color name="dk_on_accent">#ffffff</color>
     <color name="dk_accent_text">#2b7fff</color>
     <color name="dk_accent_soft">#152745</color>
     <color name="dk_on_accent_soft">#bedbff</color>

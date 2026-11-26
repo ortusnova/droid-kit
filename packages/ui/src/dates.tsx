@@ -1,7 +1,7 @@
 // Date and time components. React Aria provides the calendar, date picker and
 // the typed time field; the touch time picker panels are the kit's own,
 // because React Aria has none and WebKitGTK shows no native picker.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   Button as AriaButton,
   Calendar,
@@ -10,6 +10,8 @@ import {
   CalendarGridBody,
   CalendarGridHeader,
   CalendarHeaderCell,
+  CalendarMonthPicker,
+  CalendarYearPicker,
   DateInput,
   DatePicker as AriaDatePicker,
   DateSegment,
@@ -30,6 +32,9 @@ import { IconButton } from './frame';
 import { Sheet } from './overlays';
 import {
   cadenceOfKind,
+  dialAngle,
+  dialHour,
+  dialMinute,
   from12Hour,
   isoWeekday,
   minuteChoices,
@@ -45,7 +50,7 @@ import {
   type Weekday,
 } from './dates-logic';
 
-export type TimePanel = 'wheel' | 'dial' | 'chips';
+export type TimePanel = 'wheel' | 'dial';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -61,8 +66,8 @@ export function TimePicker({
   value,
   defaultValue,
   onChange,
-  minuteStep = 5,
-  panel = 'wheel',
+  minuteStep = 1,
+  panel = 'dial',
   hourCycle,
 }: {
   label: string;
@@ -159,7 +164,7 @@ function TimePanelSheet({
   useEffect(() => {
     if (isOpen) setDraft(new Time(initial.hour, snapMinute(initial.minute, minuteStep)));
   }, [isOpen, initial, minuteStep]);
-  const Panel = panel === 'wheel' ? WheelPanel : panel === 'dial' ? DialPanel : ChipsPanel;
+  const Panel = panel === 'wheel' ? WheelPanel : DialPanel;
   return (
     <Sheet isOpen={isOpen} onClose={onCancel} title={title}>
       <p className="text-headline mb-3 text-center font-bold tabular-nums" aria-live="polite" data-testid="time-preview">
@@ -296,7 +301,7 @@ function WheelPanel(props: PanelProps) {
   );
 }
 
-// Dial: a clock face, hour first and then minutes, like Android's clock dialog.
+// Dial: a clock face with an Hour/Minute switch. Tap or drag around the face to pick.
 function DialPanel(props: PanelProps) {
   const parts = useParts(props);
   const [step, setStep] = useState<'hour' | 'minute'>('hour');
@@ -304,26 +309,64 @@ function DialPanel(props: PanelProps) {
   const radius = 104;
   const outer = step === 'hour' ? hourChoices(true) : minuteChoices(5);
   const inner = step === 'hour' && !props.twelve ? [0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23] : [];
-  const selected = step === 'hour' ? parts.hour : props.minuteStep === 5 ? parts.minute : snapMinute(parts.minute, 5);
+  const selected = step === 'hour' ? parts.hour : parts.minute;
 
   const place = (i: number, r: number) => {
     const a = (i / 12) * 2 * Math.PI;
-    return { left: size / 2 + r * Math.sin(a) - 22, top: size / 2 - r * Math.cos(a) - 22 };
+    return { left: size / 2 + r * Math.sin(a), top: size / 2 - r * Math.cos(a), translate: '-50% -50%' };
   };
-  const pick = (v: number) => {
-    if (step === 'hour') {
-      parts.setHour(props.twelve ? v : v);
-      setStep('minute');
-    } else parts.setMinute(v);
+  // Hands: the hour hand is shorter than the minute hand. Both always show; the one not being picked is dimmed.
+  const centre = size / 2;
+  const tip = (at: number, length: number) => ({
+    x: centre + length * Math.sin((at / 12) * 2 * Math.PI),
+    y: centre - length * Math.cos((at / 12) * 2 * Math.PI),
+  });
+  const hourOnInner = !props.twelve && (parts.hour === 0 || parts.hour > 12);
+  const hourHand = tip(parts.hour % 12, radius - 52);
+  // The minute hand stops at the edge of the selection dot (radius 22), short of the numbers.
+  const minuteHand = tip(parts.minute / 5, radius - 22);
+  const hourMark = tip(parts.hour % 12, hourOnInner ? radius - 48 : radius);
+  // The selection dot sits beyond the hand's tip, so it follows a drag minute by minute.
+  const dot = step === 'hour' ? hourMark : tip(parts.minute / 5, radius);
+  // Picking a value stays on its step; the Hour/Minute control switches (Brian's choice).
+  const pick = (v: number) => (step === 'hour' ? parts.setHour(v) : parts.setMinute(v));
+
+  // Dragging around the face picks any value; on minutes it follows the minute step.
+  const face = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+  const fromPointer = (e: ReactPointerEvent) => {
+    const r = face.current!.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    const angle = dialAngle(dx, dy);
+    if (step === 'hour') parts.setHour(dialHour(angle, !props.twelve && Math.hypot(dx, dy) < radius - 24));
+    else parts.setMinute(dialMinute(angle, props.minuteStep));
+  };
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    dragging.current = true;
+    face.current!.setPointerCapture(e.pointerId);
+    fromPointer(e);
+    e.preventDefault();
+  };
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (dragging.current) fromPointer(e);
+  };
+  const onPointerUp = (e: ReactPointerEvent) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    fromPointer(e);
   };
   const mark = (v: number, i: number, r: number) => (
     <button
       key={`${r}-${v}`}
       aria-pressed={v === selected}
       aria-label={step === 'hour' ? `${v} o'clock` : `${v} minutes`}
-      className={`btn btn-circle absolute size-11 min-h-0 border-0 tabular-nums shadow-none ${v === selected ? 'btn-primary' : 'btn-ghost'}`}
+      className={`size-touch absolute grid place-items-center rounded-full font-semibold tabular-nums outline-offset-2 focus-visible:outline-2 ${v === selected ? 'text-primary-content' : ''}`}
       style={place(i, r)}
-      onClick={() => pick(v)}
+      // Pointer input is handled by the face; a click here from a tap would land after
+      // the step changed and set the minute to the hour. Only keyboard clicks (detail 0) count.
+      onClick={e => e.detail === 0 && pick(v)}
     >
       {step === 'minute' ? pad(v) : v}
     </button>
@@ -340,46 +383,43 @@ function DialPanel(props: PanelProps) {
         value={step}
         onChange={setStep}
       />
-      <div className="bg-base-200 relative rounded-full" style={{ width: size, height: size, flex: 'none', maxWidth: size }}>
+      <div
+        ref={face}
+        className="bg-base-200 relative touch-none rounded-full select-none"
+        style={{ width: size, height: size, flex: 'none', maxWidth: size }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => (dragging.current = false)}
+      >
+        <svg className="text-primary pointer-events-none absolute inset-0" width={size} height={size} aria-hidden="true">
+          {/* 60 ticks just inside the rim, clear of the numbers (which end about 12 px past their ring); hours and 5-minute marks are longer. */}
+          <g className="text-muted" stroke="currentColor" strokeLinecap="round">
+            {Array.from({ length: 60 }, (_, m) => {
+              const a = (m / 60) * 2 * Math.PI;
+              const outerR = centre - 3;
+              const innerR = outerR - (m % 5 === 0 ? 9 : 4);
+              return (
+                <line
+                  key={m}
+                  x1={centre + innerR * Math.sin(a)}
+                  y1={centre - innerR * Math.cos(a)}
+                  x2={centre + outerR * Math.sin(a)}
+                  y2={centre - outerR * Math.cos(a)}
+                  strokeWidth={m % 5 === 0 ? 1.5 : 1}
+                  opacity={m % 5 === 0 ? 0.8 : 0.5}
+                />
+              );
+            })}
+          </g>
+          <line x1={centre} y1={centre} x2={hourHand.x} y2={hourHand.y} stroke="currentColor" strokeWidth={4} strokeLinecap="round" opacity={step === 'minute' ? 0.35 : 1} />
+          <line x1={centre} y1={centre} x2={minuteHand.x} y2={minuteHand.y} stroke="currentColor" strokeWidth={2} strokeLinecap="round" opacity={step === 'hour' ? 0.35 : 1} />
+          <circle cx={dot.x} cy={dot.y} r={22} fill="currentColor" />
+          {step === 'minute' && parts.minute % 5 !== 0 && <circle className="text-primary-content" cx={dot.x} cy={dot.y} r={3} fill="currentColor" />}
+          <circle cx={centre} cy={centre} r={5} fill="currentColor" />
+        </svg>
         {outer.map((v, i) => mark(v, step === 'hour' ? (v % 12) : i, radius))}
         {inner.map((v, i) => mark(v, i, radius - 48))}
-      </div>
-      {step === 'minute' && props.minuteStep === 1 && (
-        <div className="flex items-center gap-2">
-          <Button onPress={() => parts.setMinute((parts.minute + 59) % 60)}>−1 min</Button>
-          <Button onPress={() => parts.setMinute((parts.minute + 1) % 60)}>+1 min</Button>
-        </div>
-      )}
-      {props.twelve && <AmPm pm={parts.pm} onChange={parts.setPm} />}
-    </div>
-  );
-}
-
-// Chips: every hour, then every minute, as a grid of buttons.
-function ChipsPanel(props: PanelProps) {
-  const parts = useParts(props);
-  const chip = (active: boolean) => `btn min-h-touch h-11 px-0 tabular-nums ${active ? 'btn-primary' : 'btn-ghost bg-base-200'}`;
-  return (
-    <div className="flex flex-col gap-3" data-panel="chips">
-      <div>
-        <p className="text-small text-muted mb-1">Hour</p>
-        <div className="grid grid-cols-6 gap-1" role="group" aria-label="Hour">
-          {hourChoices(props.twelve).map(h => (
-            <button key={h} aria-pressed={h === parts.hour} className={chip(h === parts.hour)} onClick={() => parts.setHour(h)}>
-              {props.twelve ? h : pad(h)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <p className="text-small text-muted mb-1">Minute</p>
-        <div className="grid grid-cols-6 gap-1" role="group" aria-label="Minute">
-          {minuteChoices(props.minuteStep).map(m => (
-            <button key={m} aria-pressed={m === parts.minute} className={chip(m === parts.minute)} onClick={() => parts.setMinute(m)}>
-              {pad(m)}
-            </button>
-          ))}
-        </div>
       </div>
       {props.twelve && <AmPm pm={parts.pm} onChange={parts.setPm} />}
     </div>
@@ -397,39 +437,101 @@ export function MonthCalendar({ label = 'Month', value, defaultValue, onChange }
   );
 }
 
+/**
+ * The calendar's inside. The month and the year in the header are buttons that
+ * switch to a grid of months or of years, for jumping far without paging.
+ */
 function CalendarBody() {
   const now = todayLocal();
+  const [view, setView] = useState<'days' | 'months' | 'years'>('days');
+  const headerButton = (active: boolean) => `btn btn-ghost min-h-touch h-auto px-2 text-body font-semibold ${active ? 'text-accent-text' : ''}`;
+  const choice = (selected: boolean) => `btn min-h-touch h-auto px-0 font-normal ${selected ? 'btn-primary' : 'btn-ghost'}`;
   return (
     <>
       <header className="mb-1 flex items-center justify-between">
-        <AriaButton slot="previous" aria-label="Previous month" className="btn btn-ghost btn-circle size-touch">
+        <AriaButton slot="previous" aria-label="Previous month" className={`btn btn-ghost btn-circle size-touch ${view === 'days' ? '' : 'invisible'}`}>
           <ChevronLeft size={20} />
         </AriaButton>
-        <Heading className="text-body font-semibold" />
-        <AriaButton slot="next" aria-label="Next month" className="btn btn-ghost btn-circle size-touch">
+        <Heading className="sr-only" />
+        <div className="flex items-center">
+          <CalendarMonthPicker format="long">
+            {({ items, value }) => (
+              <button type="button" className={headerButton(view === 'months')} aria-expanded={view === 'months'} onClick={() => setView(view === 'months' ? 'days' : 'months')}>
+                {items.find(i => i.id === value)?.formatted}
+              </button>
+            )}
+          </CalendarMonthPicker>
+          <CalendarYearPicker>
+            {({ items, value }) => (
+              <button type="button" className={headerButton(view === 'years')} aria-expanded={view === 'years'} onClick={() => setView(view === 'years' ? 'days' : 'years')}>
+                {items.find(i => i.id === value)?.formatted}
+              </button>
+            )}
+          </CalendarYearPicker>
+        </div>
+        <AriaButton slot="next" aria-label="Next month" className={`btn btn-ghost btn-circle size-touch ${view === 'days' ? '' : 'invisible'}`}>
           <ChevronRight size={20} />
         </AriaButton>
       </header>
-      <CalendarGrid weekdayStyle="narrow" className="w-full border-separate border-spacing-y-0.5">
-        <CalendarGridHeader>{day => <CalendarHeaderCell className="text-caption text-muted pb-1 font-normal">{day}</CalendarHeaderCell>}</CalendarGridHeader>
-        <CalendarGridBody>
-          {date => (
-            <CalendarCell
-              date={date}
-              className={({ isSelected, isOutsideMonth, isFocusVisible }) =>
-                [
-                  'btn btn-circle size-touch mx-auto min-h-0 font-normal',
-                  isSelected ? 'btn-primary' : 'btn-ghost',
-                  !isSelected && date.compare(now) === 0 ? 'border-primary text-accent-text' : '',
-                  isOutsideMonth ? 'invisible' : '',
-                  isFocusVisible ? 'outline-primary outline-2 outline-offset-2' : '',
-                ].join(' ')
-              }
-            />
+      {view === 'months' && (
+        <CalendarMonthPicker format="short">
+          {({ items, value, onChange, 'aria-label': label }) => (
+            <div role="group" aria-label={label} className="grid grid-cols-3 gap-1" data-calendar-view="months">
+              {items.map(i => (
+                <button key={i.id} type="button" aria-pressed={i.id === value} className={choice(i.id === value)} onClick={() => (onChange(i.id), setView('days'))}>
+                  {i.formatted}
+                </button>
+              ))}
+            </div>
           )}
-        </CalendarGridBody>
-      </CalendarGrid>
+        </CalendarMonthPicker>
+      )}
+      {view === 'years' && (
+        <CalendarYearPicker visibleYears={41}>
+          {({ items, value, onChange, 'aria-label': label }) => <YearGrid label={label} items={items} value={value} onPick={id => (onChange(id), setView('days'))} choice={choice} />}
+        </CalendarYearPicker>
+      )}
+      {view === 'days' && (
+        <CalendarGrid weekdayStyle="narrow" className="w-full border-separate border-spacing-y-0.5">
+          <CalendarGridHeader>{day => <CalendarHeaderCell className="text-caption text-muted pb-1 font-normal">{day}</CalendarHeaderCell>}</CalendarGridHeader>
+          <CalendarGridBody>
+            {date => (
+              <CalendarCell
+                date={date}
+                className={({ isSelected, isOutsideMonth, isFocusVisible }) =>
+                  [
+                    'btn btn-circle size-touch mx-auto min-h-0 font-normal',
+                    isSelected ? 'btn-primary' : 'btn-ghost',
+                    !isSelected && date.compare(now) === 0 ? 'border-primary text-accent-text' : '',
+                    isOutsideMonth ? 'invisible' : '',
+                    isFocusVisible ? 'outline-primary outline-2 outline-offset-2' : '',
+                  ].join(' ')
+                }
+              />
+            )}
+          </CalendarGridBody>
+        </CalendarGrid>
+      )}
     </>
+  );
+}
+
+/** Years around the shown one, scrolled so the shown year is in the middle. */
+function YearGrid({ label, items, value, onPick, choice }: { label: string; items: { id: number; formatted: string }[]; value: unknown; onPick: (id: number) => void; choice: (selected: boolean) => string }) {
+  const box = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    // Not scrollIntoView: inside a sheet that would scroll the sheet itself.
+    const el = box.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (box.current && el) box.current.scrollTop = el.offsetTop - box.current.clientHeight / 2 + el.offsetHeight / 2;
+  }, []);
+  return (
+    <div ref={box} role="group" aria-label={label} className="relative grid max-h-72 grid-cols-4 gap-1 overflow-y-auto" data-calendar-view="years">
+      {items.map(i => (
+        <button key={i.id} type="button" aria-pressed={i.id === value} className={choice(i.id === value)} onClick={() => onPick(i.id)}>
+          {i.formatted}
+        </button>
+      ))}
+    </div>
   );
 }
 

@@ -90,7 +90,7 @@ case "$args" in
   devices) printf 'List of devices attached\\n192.168.1.5:40000\\tdevice\\n' ;;
   *"dumpsys notification"*) cat ${dump} ;;
   *screencap*) head -c 4000 /dev/zero ;;
-  *\"dumpsys input_method\"*|*"dumpsys input_method"*) if [ -e ${dir}/keyboard ]; then echo "      mInputShown=true"; else echo "      mInputShown=false"; fi ;;
+  *"dumpsys input_method"*) if [ -e ${dir}/keyboard ]; then echo "      mInputShown=true"; else echo "      mInputShown=false"; fi ;;
   *KEYCODE_BACK*) rm -f ${dir}/keyboard ;;
   *pidof*) echo 1234 ;;
 esac

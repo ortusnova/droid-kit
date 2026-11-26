@@ -261,7 +261,20 @@ export async function createDriver(context) {
   /** One command in the device's shell. @param {string} command */
   const shell = command => adb(['shell', command]);
   /** @param {string} expression @param {number} [timeoutMs] @returns {Promise<any>} */
-  const evaluate = async (expression, timeoutMs = 30_000) => (await bridge.request({ op: 'eval', pkg, expression, timeoutMs }, timeoutMs + 10_000)).value;
+  const evaluate = async (expression, timeoutMs = 30_000) => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return (await bridge.request({ op: 'eval', pkg, expression, timeoutMs }, timeoutMs + 10_000)).value;
+      } catch (e) {
+        // The page's script context went away while the call was waiting (the page was loading or reloaded): the answer is lost, the question can be asked again.
+        if (attempt < 3 && /Promise was collected|context was destroyed|Cannot find context/i.test(e instanceof Error ? e.message : String(e))) {
+          await sleep(1000);
+          continue;
+        }
+        throw e;
+      }
+    }
+  };
 
   let lastAction = 0;
   /** Wakes the phone, lifts the keyguard (the phone has no PIN) and closes the notification shade: a sleeping screen or an open shade swallows taps. */
@@ -476,11 +489,15 @@ export async function createDriver(context) {
       await ensureAwake();
       // `am kill` ends only a process that is in the background; Home first. Unlike a force-stop it keeps the app's alarms, as the system's own kill does.
       await shell('input keyevent KEYCODE_HOME');
-      await sleep(800);
-      await shell(`am kill ${pkg}`);
-      const until = Date.now() + 5000;
-      while (Date.now() < until && (await shell(`pidof ${pkg}`)).trim()) await sleep(200);
-      if ((await shell(`pidof ${pkg}`)).trim()) throw new Error(`${pkg} is still running after am kill`);
+      // The app counts as in the background a moment after Home (longer on the emulator); until then am kill leaves it alone.
+      const until = Date.now() + 15_000;
+      for (;;) {
+        await sleep(800);
+        await shell(`am kill ${pkg}`);
+        await sleep(400);
+        if (!(await shell(`pidof ${pkg}`)).trim()) return;
+        if (Date.now() > until) throw new Error(`${pkg} is still running 15 s after Home and am kill`);
+      }
     },
 
     async keyboardShown() {

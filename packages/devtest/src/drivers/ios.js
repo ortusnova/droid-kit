@@ -168,7 +168,8 @@ class Page {
 
   close() {
     this.dropSocket();
-    this.bridge?.kill('SIGTERM');
+    // SIGKILL: the bridge keeps no state, and on SIGTERM it waits for the page's open socket, which outlives the run.
+    this.bridge?.kill('SIGKILL');
     this.bridge = null;
   }
 }

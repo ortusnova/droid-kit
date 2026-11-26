@@ -73,6 +73,8 @@ export async function runScenarios(driver, list, options = {}) {
       },
     };
     try {
+      // A driver can get the device ready (Android: wake the screen, close the shade).
+      await driver.beforeScenario?.(s.name);
       await s.run(context);
       results.push({ name: s.name, file, outcome: 'pass', steps, notes, ms: Date.now() - started });
     } catch (e) {

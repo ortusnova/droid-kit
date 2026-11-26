@@ -75,6 +75,21 @@ describe('runScenarios', () => {
     expect(ran.outcome).toBe('pass');
   });
 
+  it("lets the driver get the device ready before each scenario, and fails the scenario if that fails", async () => {
+    const calls: string[] = [];
+    const d = fakeDriver();
+    d.beforeScenario = async name => void calls.push(name);
+    const ok = scenario('first', async () => {});
+    await runScenarios(d, [{ file: 'a.ts', scenario: ok }, { file: 'b.ts', scenario: scenario('second', async () => {}) }]);
+    expect(calls).toEqual(['first', 'second']);
+    d.beforeScenario = async () => {
+      throw new Error('the phone is not awake');
+    };
+    const [result] = await runScenarios(d, [{ file: 'a.ts', scenario: ok }]);
+    expect(result.outcome).toBe('fail');
+    expect(result.reason).toContain('the phone is not awake');
+  });
+
   it('runs only the scenarios whose name contains --only', async () => {
     const all = [passing, failing].map(s => ({ file: 'f', scenario: s }));
     const rs = await runScenarios(fakeDriver(), all, { only: 'taps' });

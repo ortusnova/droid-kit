@@ -60,7 +60,16 @@ export interface Driver {
   waitForNotification(match: NotificationMatch, options?: WaitOptions): Promise<void>;
   /** Tap a shown notification. Needs `notifications`. */
   tapNotification(match: NotificationMatch): Promise<void>;
-  /** Release whatever the driver holds (sockets, forwards). */
+  /**
+   * Called before each scenario runs: Android wakes the phone, lifts the keyguard and closes the notification
+   * shade, because a sleeping screen or an open shade swallows taps.
+   */
+  beforeScenario?(name: string): Promise<void>;
+  /** Set the device's clock (epoch milliseconds). Present with the `clock` capability; `close()` restores automatic time. */
+  setClock?(epochMs: number): Promise<void>;
+  /** Set the device's time zone (an IANA name). Present with the `clock` capability; `close()` restores the zone. */
+  setZone?(zone: string): Promise<void>;
+  /** Release whatever the driver holds (sockets, forwards), and put back what a scenario changed (the clock). */
   close(): Promise<void>;
 }
 

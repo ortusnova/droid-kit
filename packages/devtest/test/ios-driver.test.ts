@@ -61,6 +61,8 @@ beforeEach(async () => {
   sockets = [];
   page = vm.createContext({ setTimeout, Promise, JSON, String, console });
   page.window = page;
+  // WebKit's scrollBy with 'instant' scrolls the distance twice; the driver's shim must replace it.
+  vm.runInContext(`window.Element = class { constructor() { this.scrollTop = 0; this.scrollLeft = 0; } scrollBy(o) { this.scrollTop += (o.top || 0) * 2; } }`, page);
   // The page is the context's global. `document` is just enough for the driver's own readiness check.
   page.document = { readyState: 'complete', querySelector: () => ({ children: [1] }) };
 
@@ -176,6 +178,28 @@ describe('the iPhone driver', () => {
     await d.eval('(setTimeout(() => { window.n = 5; }, 250), 0)');
     await d.waitFor('window.n === 5', { timeoutMs: 3000 });
     await expect(d.waitFor('window.n === 99', { timeoutMs: 300 })).rejects.toThrow(/timed out waiting for window\.n === 99/);
+    await d.close();
+  });
+
+  it('waits a moment for an element that is still sliding in or under the app bar, and not for other errors', async () => {
+    const d = await createDriver(context());
+    // The driver installs the Linux page helpers once as window.__dkTest; stand-ins keep this to the driver's own logic.
+    await d.eval(`window.__tries = 0; window.__dkTest = {
+      tap: async () => { if (++window.__tries < 3) throw new Error('the element is not on the screen at (195, 1547)'); return 'tapped'; },
+      swipe: async () => { throw new Error('no element matches #gone'); },
+    }; 0`);
+    await d.tap('#x');
+    expect(await d.eval('window.__tries')).toBe(3);
+    await expect(d.swipe('#gone', 'down')).rejects.toThrow(/no element matches #gone/);
+    await d.close();
+  });
+
+  it('makes an instant scroll exact, because the iPhone scrolls twice the distance', async () => {
+    const d = await createDriver(context());
+    await d.eval(`window.__dkTest = { tap: async () => 'ok' }; 0`);
+    await d.tap('#x'); // the shim is installed with the first helper call
+    expect(await d.eval(`(() => { const e = new Element(); e.scrollBy({ top: 300, behavior: 'instant' }); return e.scrollTop; })()`)).toBe(300);
+    expect(await d.eval(`(() => { const e = new Element(); e.scrollBy({ top: 300 }); return e.scrollTop; })()`)).toBe(600);
     await d.close();
   });
 

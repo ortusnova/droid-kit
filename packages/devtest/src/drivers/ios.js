@@ -173,6 +173,29 @@ class Page {
   }
 }
 
+/**
+ * On the iPhone `scrollBy({ top, behavior: 'instant' })` scrolls twice: the new position shows at once, and a frame
+ * later the same distance is added again (300 asked for, 600 reached; assigning `scrollTop` is exact). The Linux
+ * helpers scroll with it, and a second scroll puts the element under the app bar or off the screen. So an
+ * "instant" scroll is an assignment here, installed once in the page before a helper runs.
+ */
+const SCROLL_SHIM = `(() => {
+  if (Element.prototype.__dkScrollBy) return;
+  const original = Element.prototype.scrollBy;
+  Element.prototype.__dkScrollBy = true;
+  Element.prototype.scrollBy = function (options) {
+    if (options && typeof options === 'object' && options.behavior === 'instant') {
+      this.scrollTop += options.top || 0;
+      this.scrollLeft += options.left || 0;
+      return;
+    }
+    return original.apply(this, arguments);
+  };
+})()`;
+
+/** A page helper call, with the scroll fix installed first. @param {string} name @param {unknown[]} args */
+const pageHelper = (name, args) => `(${SCROLL_SHIM}, ${helper(name, args)})`;
+
 /** @type {import('../index.js').CreateDriver} */
 export async function createDriver(context) {
   mkdirSync(context.runDir, { recursive: true });
@@ -253,6 +276,26 @@ export async function createDriver(context) {
     }
   }
 
+  /**
+   * Runs a page helper that needs the element where a finger would find it. WebKit on the iPhone starts a sheet's
+   * slide-in and the router's scroll restoration a moment later than the other targets do, so for a little while an
+   * element can still be below the screen or under the app bar. A person waits for it to arrive; so does this, for
+   * up to 3 s, and only for those two reasons. Any other error, or the same one after that, fails the step.
+   * @param {string} name @param {unknown[]} args
+   */
+  const placed = async (name, args) => {
+    const until = Date.now() + 3000;
+    for (;;) {
+      try {
+        return await evaluate(pageHelper(name, args));
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (!/is not on the screen|is covered by/.test(message) || Date.now() > until) throw e;
+        await sleep(250);
+      }
+    }
+  };
+
   /** `dk` in the app's directory; rejects with the tail of its output. @param {string[]} args */
   const dk = args =>
     new Promise((resolve, reject) => {
@@ -283,19 +326,19 @@ export async function createDriver(context) {
       await ready(40_000);
     },
     async open(route) {
-      await evaluate(helper('open', [route]));
+      await evaluate(pageHelper('open', [route]));
     },
     async tap(selector) {
-      await evaluate(helper('tap', [selector]));
+      await placed('tap', [selector]);
     },
     async swipe(selector, direction) {
-      await evaluate(helper('swipe', [selector, direction]));
+      await placed('swipe', [selector, direction]);
     },
     async type(selector, text) {
-      await evaluate(helper('type', [selector, text]));
+      await evaluate(pageHelper('type', [selector, text]));
     },
     async back() {
-      await evaluate(helper('back', []));
+      await evaluate(pageHelper('back', []));
     },
     eval: /** @type {Driver['eval']} */ (expression => /** @type {any} */ (evaluate(expression))),
     async waitFor(expression, options = {}) {

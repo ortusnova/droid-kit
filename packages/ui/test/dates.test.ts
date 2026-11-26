@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { CalendarDate, Time } from '@internationalized/date';
 import {
+  LAST_DAY,
   cadenceOfKind,
+  dayLabel,
+  isCadence,
+  maxDayOfMonth,
+  monthWeeks,
+  setYearlyMonth,
+  type Cadence,
   twoLetters,
   dialAngle,
   dialHour,
@@ -47,6 +54,142 @@ describe('cadence', () => {
     const weekly = { kind: 'weekly' as const, weekdays: [2, 5] as (2 | 5)[] };
     expect(cadenceOfKind('daily', weekly)).toEqual({ kind: 'daily' });
     expect(cadenceOfKind('weekly', weekly)).toEqual(weekly);
+  });
+});
+
+describe('cadence values', () => {
+  it('daily, weekly, times a week, monthly and yearly have exactly the D5 shapes', () => {
+    const values: Cadence[] = [
+      { kind: 'daily' },
+      { kind: 'weekly', weekdays: [1, 4] },
+      { kind: 'timesPerWeek', times: 3 },
+      { kind: 'monthly', day: 15 },
+      { kind: 'monthly', day: LAST_DAY },
+      { kind: 'yearly', month: 3, day: 15 },
+      { kind: 'yearly', month: 2, day: 29 },
+    ];
+    for (const v of values) expect(isCadence(JSON.parse(JSON.stringify(v)))).toBe(true);
+    expect(LAST_DAY).toBe(31);
+  });
+  it('rejects values outside the ranges', () => {
+    for (const bad of [
+      null,
+      'daily',
+      { kind: 'hourly' },
+      { kind: 'weekly', weekdays: [] },
+      { kind: 'weekly', weekdays: [0] },
+      { kind: 'weekly', weekdays: [8] },
+      { kind: 'weekly', weekdays: [1, 1] },
+      { kind: 'timesPerWeek', times: 0 },
+      { kind: 'timesPerWeek', times: 7 },
+      { kind: 'timesPerWeek', times: 2.5 },
+      { kind: 'monthly' },
+      { kind: 'monthly', day: 0 },
+      { kind: 'monthly', day: 32 },
+      { kind: 'yearly', month: 13, day: 1 },
+      { kind: 'yearly', month: 2, day: 30 },
+      { kind: 'yearly', month: 4, day: 31 },
+    ])
+      expect(isCadence(bad), JSON.stringify(bad)).toBe(false);
+  });
+  it('allows 29 February but not 30 February', () => {
+    expect(maxDayOfMonth(2)).toBe(29);
+    expect([1, 3, 4, 12].map(maxDayOfMonth)).toEqual([31, 31, 30, 31]);
+  });
+  it('a yearly day shrinks to fit when the month changes', () => {
+    expect(setYearlyMonth({ kind: 'yearly', month: 3, day: 31 }, 2)).toEqual({ kind: 'yearly', month: 2, day: 29 });
+    expect(setYearlyMonth({ kind: 'yearly', month: 3, day: 31 }, 4)).toEqual({ kind: 'yearly', month: 4, day: 30 });
+    expect(setYearlyMonth({ kind: 'yearly', month: 3, day: 15 }, 5)).toEqual({ kind: 'yearly', month: 5, day: 15 });
+  });
+});
+
+describe('switching cadence kinds', () => {
+  const anchor = new CalendarDate(2026, 11, 26);
+  it('new kinds start from sensible values', () => {
+    expect(cadenceOfKind('daily')).toEqual({ kind: 'daily' });
+    expect(cadenceOfKind('weekly', { kind: 'daily' }, 4)).toEqual({ kind: 'weekly', weekdays: [4] });
+    expect(cadenceOfKind('timesPerWeek', { kind: 'daily' })).toEqual({ kind: 'timesPerWeek', times: 3 });
+    expect(cadenceOfKind('monthly', { kind: 'daily' }, 1, { anchor })).toEqual({ kind: 'monthly', day: 26 });
+    expect(cadenceOfKind('yearly', { kind: 'daily' }, 1, { anchor })).toEqual({ kind: 'yearly', month: 11, day: 26 });
+    expect(cadenceOfKind('monthly')).toEqual({ kind: 'monthly', day: 1 });
+    expect(cadenceOfKind('yearly')).toEqual({ kind: 'yearly', month: 1, day: 1 });
+  });
+  it('keeps the value when the kind does not change', () => {
+    const c: Cadence = { kind: 'yearly', month: 3, day: 15 };
+    expect(cadenceOfKind('yearly', c, 1, { anchor })).toBe(c);
+  });
+  it('remembers what was chosen before, for every kind', () => {
+    const memory = {
+      weekly: { kind: 'weekly' as const, weekdays: [2, 5] as (2 | 5)[] },
+      timesPerWeek: { kind: 'timesPerWeek' as const, times: 5 as const },
+      monthly: { kind: 'monthly' as const, day: LAST_DAY },
+      yearly: { kind: 'yearly' as const, month: 3, day: 15 },
+    };
+    const from: Cadence = { kind: 'daily' };
+    expect(cadenceOfKind('weekly', from, 1, { memory })).toEqual(memory.weekly);
+    expect(cadenceOfKind('timesPerWeek', from, 1, { memory })).toEqual(memory.timesPerWeek);
+    expect(cadenceOfKind('monthly', from, 1, { memory, anchor })).toEqual(memory.monthly);
+    expect(cadenceOfKind('yearly', from, 1, { memory, anchor })).toEqual(memory.yearly);
+  });
+  it('an empty weekday list is not kept', () => {
+    expect(cadenceOfKind('weekly', { kind: 'weekly', weekdays: [] }, 3)).toEqual({ kind: 'weekly', weekdays: [3] });
+  });
+  it('times a week carries no weekdays and weekly carries no count', () => {
+    expect(cadenceOfKind('timesPerWeek', { kind: 'weekly', weekdays: [1, 4] })).toEqual({ kind: 'timesPerWeek', times: 3 });
+    expect(cadenceOfKind('weekly', { kind: 'timesPerWeek', times: 3 }, 2)).toEqual({ kind: 'weekly', weekdays: [2] });
+  });
+});
+
+describe('month grid', () => {
+  const nov = new CalendarDate(2026, 11, 26);
+  const iso = (weeks: ReturnType<typeof monthWeeks>) => weeks.map(w => w.map(d => d?.day ?? null));
+  it('en-US starts on Sunday: 1 November 2026 is a Sunday', () => {
+    expect(iso(monthWeeks(nov, 'en-US'))).toEqual([
+      [1, 2, 3, 4, 5, 6, 7],
+      [8, 9, 10, 11, 12, 13, 14],
+      [15, 16, 17, 18, 19, 20, 21],
+      [22, 23, 24, 25, 26, 27, 28],
+      [29, 30, null, null, null, null, null],
+    ]);
+  });
+  it('en-GB starts on Monday, so the 1st sits in the last column of the first week', () => {
+    expect(iso(monthWeeks(nov, 'en-GB'))).toEqual([
+      [null, null, null, null, null, null, 1],
+      [2, 3, 4, 5, 6, 7, 8],
+      [9, 10, 11, 12, 13, 14, 15],
+      [16, 17, 18, 19, 20, 21, 22],
+      [23, 24, 25, 26, 27, 28, 29],
+      [30, null, null, null, null, null, null],
+    ]);
+  });
+  it('a given first day overrides the locale, both ways', () => {
+    expect(monthWeeks(nov, 'en-US', 'mon')[0].map(d => d?.day ?? null)).toEqual([null, null, null, null, null, null, 1]);
+    expect(monthWeeks(nov, 'en-GB', 'sun')[0].map(d => d?.day ?? null)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(weekdayOrder('en-US', 'mon')).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(weekdayOrder('en-GB', 'sun')).toEqual([7, 1, 2, 3, 4, 5, 6]);
+  });
+  it('holds every day of the month once, in order, and leaves no empty week', () => {
+    for (const [y, m] of [[2026, 2], [2028, 2], [2026, 12], [2027, 5], [2026, 8]]) {
+      for (const first of [undefined, 'mon', 'sun'] as const) {
+        const weeks = monthWeeks(new CalendarDate(y, m, 10), 'en-US', first);
+        const days = weeks.flat().filter(Boolean).map(d => d!.day);
+        expect(days).toEqual(Array.from({ length: new CalendarDate(y, m, 1).calendar.getDaysInMonth(new CalendarDate(y, m, 1)) }, (_, i) => i + 1));
+        for (const w of weeks) {
+          expect(w).toHaveLength(7);
+          expect(w.some(Boolean)).toBe(true);
+        }
+      }
+    }
+  });
+  it('February 2026 starting on Sunday fits four weeks in en-US', () => {
+    expect(monthWeeks(new CalendarDate(2026, 2, 1), 'en-US')).toHaveLength(4);
+  });
+  it('names a day in the locale\'s date format', () => {
+    const d = new CalendarDate(2026, 11, 26);
+    expect(dayLabel(d, 'en-GB', 'kept')).toBe('26 November: kept');
+    expect(dayLabel(d, 'en-US', 'kept')).toBe('November 26: kept');
+    expect(dayLabel(d, 'en-GB', 'missed')).toBe('26 November: missed');
+    expect(dayLabel(d, 'en-GB', 'short', { short: 'kept, two-minute version' })).toBe('26 November: kept, two-minute version');
   });
 });
 

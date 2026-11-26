@@ -21,6 +21,7 @@ import {
   List,
   ListRow,
   MonthCalendar,
+  MonthMarks,
   ProgressBar,
   ProgressRing,
   SegmentedControl,
@@ -35,6 +36,7 @@ import {
   WeekStrip,
   showToast,
   type Cadence,
+  type DayMark,
   type TimePanel,
 } from '@droid-kit/ui';
 
@@ -149,13 +151,54 @@ function TimeDemo({ panel, step = 1, cycle }: { panel: TimePanel; step?: 1 | 5; 
   );
 }
 
-function CadenceDemo() {
-  const [c, setC] = useState<Cadence>({ kind: 'weekly', weekdays: [1, 4] });
+function CadenceDemo({ initial, label }: { initial: Cadence; label: string }) {
+  const [c, setC] = useState<Cadence>(initial);
   return (
-    <>
-      <CadencePicker value={c} onChange={setC} />
+    <div className="flex flex-col gap-1" data-cadence-demo={label}>
+      <CadencePicker label={label} value={c} onChange={setC} />
       <span className="text-caption text-muted" data-cadence>{JSON.stringify(c)}</span>
-    </>
+    </div>
+  );
+}
+
+// November 2026 as a habit tracker might show it, as of the 26th.
+const NOVEMBER_MARKS: Record<string, DayMark> = {
+  '2026-11-02': 'kept',
+  '2026-11-03': 'kept',
+  '2026-11-04': 'short',
+  '2026-11-05': 'kept',
+  '2026-11-06': 'missed',
+  '2026-11-09': 'kept',
+  '2026-11-10': 'skipped',
+  '2026-11-11': 'kept',
+  '2026-11-12': 'short',
+  '2026-11-13': 'kept',
+  '2026-11-16': 'missed',
+  '2026-11-17': 'kept',
+  '2026-11-18': 'kept',
+  '2026-11-19': 'short',
+  '2026-11-20': 'kept',
+  '2026-11-23': 'kept',
+  '2026-11-24': 'skipped',
+  '2026-11-25': 'kept',
+  '2026-11-26': 'kept',
+  '2026-11-27': 'upcoming',
+  '2026-11-30': 'upcoming',
+};
+
+function MarksDemo({ firstDayOfWeek }: { firstDayOfWeek?: 'mon' | 'sun' }) {
+  const [month, setMonth] = useState(new CalendarDate(2026, 11, 1));
+  return (
+    <div className="flex flex-col gap-2" data-marks-demo={firstDayOfWeek ?? 'locale'}>
+      <MonthMarks label="Morning run" month={month} onMonthChange={setMonth} marks={NOVEMBER_MARKS} firstDayOfWeek={firstDayOfWeek} markLabels={{ short: 'kept, two-minute version' }} />
+      <ul className="text-caption text-muted flex flex-wrap gap-x-3 gap-y-1" aria-label="Marks">
+        <li>Filled check: kept</li>
+        <li>Ring with check: two-minute version</li>
+        <li>Dash: skipped</li>
+        <li>Cross: missed</li>
+        <li>Dot: upcoming</li>
+      </ul>
+    </div>
   );
 }
 
@@ -432,7 +475,42 @@ export const ENTRIES: Entry[] = [
     name: 'cadence',
     title: 'Cadence picker',
     group: 'Dates and times',
-    docs: ['value: { kind: daily } | { kind: weekly, weekdays } | { kind: monthly } | { kind: yearly }', 'onChange', 'Weekly shows the weekdays in the locale’s order; at least one stays chosen'],
-    demo: () => <CadenceDemo />,
+    docs: [
+      'value: Cadence, onChange(Cadence), label?',
+      'Cadence: { kind: daily } | { kind: weekly, weekdays: 1–7 (ISO, Monday = 1) } | { kind: timesPerWeek, times: 1–6 } | { kind: monthly, day: 1–31 } | { kind: yearly, month: 1–12, day }',
+      'Weekly has a switch: "On days" (weekdays, in the locale’s order, two-letter names; at least one stays chosen) or "Times a week" (1–6)',
+      'Monthly: a grid of 1–30 and "Last day", which is day 31 in the value (every month-day past a month’s end means its last day)',
+      'Yearly: twelve months, then the days of that month (29 for February); changing month shrinks the day to fit',
+      'Tap only: no keyboard, no text entry. Every target is 44 px, and the grids fit 360 px',
+      'Switching kinds and back keeps what was chosen; a new kind starts from today’s weekday, day or date',
+      'Also exported by the dates helpers: isCadence(json), cadenceOfKind, LAST_DAY, maxDayOfMonth',
+    ],
+    demo: () => (
+      <div className="flex flex-col gap-5">
+        <CadenceDemo initial={{ kind: 'weekly', weekdays: [1, 4] }} label="On days" />
+        <CadenceDemo initial={{ kind: 'timesPerWeek', times: 3 }} label="Times a week" />
+        <CadenceDemo initial={{ kind: 'monthly', day: 31 }} label="Monthly" />
+        <CadenceDemo initial={{ kind: 'yearly', month: 2, day: 29 }} label="Yearly" />
+      </div>
+    ),
+  },
+  {
+    name: 'month-marks',
+    title: 'Month marks',
+    group: 'Dates and times',
+    docs: [
+      'marks: Record<ISO date, DayMark> — kept | short | skipped | missed | notDue | upcoming; a day with no entry is notDue',
+      'Marks differ in shape as well as colour: filled check (kept), ring with check (short form), dash (skipped), cross (missed), nothing (not due), faint dot (upcoming)',
+      'Each day is named like “November 26: kept” in the locale’s date format; markLabels? replaces the words (e.g. short: “kept, two-minute version”)',
+      'month? (controlled) or defaultMonth? — any date in the month; onMonthChange(firstOfMonth) — previous and next month buttons are 44 px',
+      'firstDayOfWeek?: mon | sun overrides the locale’s first day of the week (the second grid below is Monday-first, whatever the locale)',
+      'Read-only: days are not buttons. Today’s number is outlined',
+    ],
+    demo: () => (
+      <div className="flex flex-col gap-4">
+        <MarksDemo />
+        <Labelled label="firstDayOfWeek=&quot;mon&quot;"><MarksDemo firstDayOfWeek="mon" /></Labelled>
+      </div>
+    ),
   },
 ];

@@ -1,25 +1,90 @@
 // Pure date and time logic behind the date components, kept apart so it can
 // be tested without a DOM.
-import { CalendarDate, Time, getDayOfWeek, startOfWeek, today, getLocalTimeZone } from '@internationalized/date';
+import { CalendarDate, Time, endOfMonth, getDayOfWeek, startOfMonth, startOfWeek, today, getLocalTimeZone } from '@internationalized/date';
 
 /** ISO weekday numbers: 1 = Monday … 7 = Sunday. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
+/** How many times a week, for a habit that is not tied to weekdays. */
+export type TimesPerWeek = 1 | 2 | 3 | 4 | 5 | 6;
+
+/**
+ * How often something repeats.
+ * - `monthly.day` is 1–31; 31 means the last day, whatever the month's length.
+ * - `yearly` allows 29 February (an app decides what it means in other years).
+ */
 export type Cadence =
   | { kind: 'daily' }
   | { kind: 'weekly'; weekdays: Weekday[] }
-  | { kind: 'monthly' }
-  | { kind: 'yearly' };
+  | { kind: 'timesPerWeek'; times: TimesPerWeek }
+  | { kind: 'monthly'; day: number }
+  | { kind: 'yearly'; month: number; day: number };
 
 export type CadenceKind = Cadence['kind'];
 
-/** A cadence of the given kind, keeping the chosen weekdays when it is weekly. */
-export function cadenceOfKind(kind: CadenceKind, previous?: Cadence, fallbackWeekday: Weekday = 1): Cadence {
-  if (kind === 'weekly') {
-    const weekdays = previous?.kind === 'weekly' && previous.weekdays.length ? previous.weekdays : [fallbackWeekday];
-    return { kind, weekdays };
+/** The longest each month can be, with February at 29 so 29 February can be chosen. */
+const MONTH_MAX_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** The most days a month can have in the yearly picker: 29 for February. Months are 1–12. */
+export function maxDayOfMonth(month: number): number {
+  return MONTH_MAX_DAYS[month - 1] ?? 31;
+}
+
+/** The day of the month that means "the last day". */
+export const LAST_DAY = 31;
+
+/** Whether a value, such as one parsed from stored JSON, is a valid cadence. */
+export function isCadence(c: unknown): c is Cadence {
+  if (typeof c !== 'object' || c === null) return false;
+  const v = c as Record<string, unknown>;
+  const int = (n: unknown, min: number, max: number) => typeof n === 'number' && Number.isInteger(n) && n >= min && n <= max;
+  switch (v.kind) {
+    case 'daily':
+      return true;
+    case 'weekly':
+      return Array.isArray(v.weekdays) && v.weekdays.length > 0 && v.weekdays.every(d => int(d, 1, 7)) && new Set(v.weekdays).size === v.weekdays.length;
+    case 'timesPerWeek':
+      return int(v.times, 1, 6);
+    case 'monthly':
+      return int(v.day, 1, 31);
+    case 'yearly':
+      return int(v.month, 1, 12) && int(v.day, 1, maxDayOfMonth(v.month as number));
+    default:
+      return false;
   }
-  return { kind };
+}
+
+/** Last chosen cadence of each kind, so switching away and back keeps what was picked. */
+export type CadenceMemory = Partial<{ [K in CadenceKind]: Extract<Cadence, { kind: K }> }>;
+
+/**
+ * A cadence of the given kind. What it holds, in order of preference: the
+ * `previous` value when it already is of that kind, the last value of that
+ * kind in `memory`, then a default: `fallbackWeekday` for weekly, three times
+ * a week, and the day (and month) of `anchor`, or the 1st (of January) without one.
+ */
+export function cadenceOfKind(
+  kind: CadenceKind,
+  previous?: Cadence,
+  fallbackWeekday: Weekday = 1,
+  options: { memory?: CadenceMemory; anchor?: CalendarDate } = {},
+): Cadence {
+  const usable = (c: Cadence | undefined) => (c?.kind === kind && (c.kind !== 'weekly' || c.weekdays.length > 0) ? c : undefined);
+  const kept = usable(previous) ?? usable(options.memory?.[kind]);
+  if (kept) return kept;
+  const { anchor } = options;
+  switch (kind) {
+    case 'daily':
+      return { kind };
+    case 'weekly':
+      return { kind, weekdays: [fallbackWeekday] };
+    case 'timesPerWeek':
+      return { kind, times: 3 };
+    case 'monthly':
+      return { kind, day: anchor?.day ?? 1 };
+    case 'yearly':
+      return { kind, month: anchor?.month ?? 1, day: anchor?.day ?? 1 };
+  }
 }
 
 /** Toggles a weekday in a weekly cadence; at least one weekday always stays chosen. */
@@ -28,6 +93,11 @@ export function toggleWeekday(c: Cadence & { kind: 'weekly' }, day: Weekday): Ca
   if (has && c.weekdays.length === 1) return c;
   const weekdays = (has ? c.weekdays.filter(d => d !== day) : [...c.weekdays, day]).sort((a, b) => a - b) as Weekday[];
   return { kind: 'weekly', weekdays };
+}
+
+/** A yearly cadence moved to another month; the day shrinks to fit (31 March → 28/29 February → 29). */
+export function setYearlyMonth(c: Cadence & { kind: 'yearly' }, month: number): Cadence {
+  return { kind: 'yearly', month, day: Math.min(c.day, maxDayOfMonth(month)) };
 }
 
 const FALLBACK_LOCALE = 'en-US';
@@ -62,10 +132,13 @@ export function isoWeekday(date: CalendarDate): Weekday {
   return (fromSunday === 0 ? 7 : fromSunday) as Weekday;
 }
 
-/** The seven weekdays in the locale's order, starting on its first day of the week. */
-export function weekdayOrder(locale: string): Weekday[] {
+/** A first day of the week an app can choose, overriding the locale's. */
+export type FirstDayOfWeek = 'mon' | 'sun';
+
+/** The seven weekdays in the locale's order, or starting on `firstDayOfWeek` when given. */
+export function weekdayOrder(locale: string, firstDayOfWeek?: FirstDayOfWeek): Weekday[] {
   const anchor = new CalendarDate(2026, 11, 25);
-  const first = startOfWeek(anchor, safeLocale(locale));
+  const first = startOfWeek(anchor, safeLocale(locale), firstDayOfWeek);
   return Array.from({ length: 7 }, (_, i) => isoWeekday(first.add({ days: i })));
 }
 
@@ -73,6 +146,25 @@ export function weekdayOrder(locale: string): Weekday[] {
 export function weekOf(date: CalendarDate, locale: string): CalendarDate[] {
   const first = startOfWeek(date, safeLocale(locale));
   return Array.from({ length: 7 }, (_, i) => first.add({ days: i }));
+}
+
+/**
+ * The weeks of the month containing `date`, each of seven entries in the
+ * locale's order (or from `firstDayOfWeek`): the dates of the month, and null
+ * for the days of the neighbouring months that fill the first and last week.
+ */
+export function monthWeeks(date: CalendarDate, locale: string, firstDayOfWeek?: FirstDayOfWeek): Array<Array<CalendarDate | null>> {
+  const loc = safeLocale(locale);
+  const first = startOfMonth(date);
+  const last = endOfMonth(date);
+  const weeks: Array<Array<CalendarDate | null>> = [];
+  for (let start = startOfWeek(first, loc, firstDayOfWeek); start.compare(last) <= 0; start = start.add({ weeks: 1 })) {
+    weeks.push(Array.from({ length: 7 }, (_, i) => {
+      const d = start.add({ days: i });
+      return d.month === first.month && d.year === first.year ? d : null;
+    }));
+  }
+  return weeks;
 }
 
 export function todayLocal(): CalendarDate {
@@ -130,4 +222,24 @@ export function dialHour(angle: number, innerRing: boolean): number {
 /** The first two letters of a short weekday name ("Thu" → "Th"); names already shorter stay whole. */
 export function twoLetters(name: string): string {
   return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(name.replace(/\.$/, ''))].slice(0, 2).map(g => g.segment).join('');
+}
+
+/** What an app can record for a day in `MonthMarks`. A day with no mark is `notDue`. */
+export type DayMark = 'kept' | 'short' | 'skipped' | 'missed' | 'notDue' | 'upcoming';
+
+/** The words after the date in a day's accessible name ("26 November: kept"). */
+export const MARK_LABELS: Record<DayMark, string> = {
+  kept: 'kept',
+  short: 'kept in short form',
+  skipped: 'skipped',
+  missed: 'missed',
+  notDue: 'not due',
+  upcoming: 'upcoming',
+};
+
+/** A day's accessible name in the locale's date format: "26 November: kept" for en-GB, "November 26: kept" for en-US. */
+export function dayLabel(date: CalendarDate, locale: string, mark: DayMark, labels: Partial<Record<DayMark, string>> = {}): string {
+  // Dates are turned into instants at UTC midnight, so format them in UTC too.
+  const text = new Intl.DateTimeFormat(safeLocale(locale), { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(date.toDate('UTC'));
+  return `${text}: ${labels[mark] ?? MARK_LABELS[mark]}`;
 }

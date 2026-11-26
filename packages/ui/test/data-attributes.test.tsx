@@ -26,6 +26,7 @@ import {
   MonthCalendar,
   WeekStrip,
   CadencePicker,
+  MonthMarks,
 } from '../src';
 
 const hook = { 'data-hook': 'x1' } as const;
@@ -55,6 +56,7 @@ const cases: Array<[string, ReactElement]> = [
   ['MonthCalendar', <MonthCalendar defaultValue={new CalendarDate(2026, 11, 25)} {...hook} />],
   ['WeekStrip', <WeekStrip value={new CalendarDate(2026, 11, 25)} onChange={() => {}} {...hook} />],
   ['CadencePicker', <CadencePicker value={{ kind: 'daily' }} onChange={() => {}} {...hook} />],
+  ['MonthMarks', <MonthMarks marks={{}} defaultMonth={new CalendarDate(2026, 11, 1)} {...hook} />],
 ];
 
 describe('data attributes', () => {

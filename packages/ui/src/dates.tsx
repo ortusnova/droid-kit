@@ -33,7 +33,10 @@ import { Sheet } from './overlays';
 import { useCloseOnBack } from './back';
 import { dataAttributes, type DataAttributes } from './dom';
 import {
+  LAST_DAY,
   cadenceOfKind,
+  maxDayOfMonth,
+  setYearlyMonth,
   twoLetters,
   safeLocale,
   dialAngle,
@@ -51,6 +54,8 @@ import {
   weekdayOrder,
   type Cadence,
   type CadenceKind,
+  type CadenceMemory,
+  type TimesPerWeek,
   type Weekday,
 } from './dates-logic';
 
@@ -621,14 +626,73 @@ export function WeekStrip({ value, onChange, ...rest }: { value: CalendarDate; o
 
 // ---------------------------------------------------------------- cadence
 
-const KINDS: Array<{ id: CadenceKind; label: string }> = [
+const KINDS: Array<{ id: 'daily' | 'weekly' | 'monthly' | 'yearly'; label: string }> = [
   { id: 'daily', label: 'Daily' },
   { id: 'weekly', label: 'Weekly' },
   { id: 'monthly', label: 'Monthly' },
   { id: 'yearly', label: 'Yearly' },
 ];
 
-/** How often something repeats; for weekly, on which weekdays. */
+const WEEKLY_MODES: Array<{ id: 'weekly' | 'timesPerWeek'; label: string }> = [
+  { id: 'weekly', label: 'On days' },
+  { id: 'timesPerWeek', label: 'Times a week' },
+];
+
+const TIMES: TimesPerWeek[] = [1, 2, 3, 4, 5, 6];
+
+// Static class names, so Tailwind finds them.
+const COLUMNS = { 4: 'grid-cols-4', 6: 'grid-cols-6', 7: 'grid-cols-7' } as const;
+
+interface Choice {
+  id: number;
+  text: string;
+  /** Accessible name, when the visible text is not enough. */
+  name?: string;
+  /** Columns the button spans. */
+  span?: 3;
+}
+
+/**
+ * One value out of a grid of touch-sized buttons: the week strip's cells, 44 px
+ * each, seven to a row. `round` makes circles (days, counts); otherwise
+ * rectangles that fill their column (months, "Last day").
+ */
+function ChoiceGrid({ label, columns, choices, value, onChange, round }: { label: string; columns: 4 | 6 | 7; choices: Choice[]; value: number; onChange: (id: number) => void; round?: boolean }) {
+  return (
+    <ToggleButtonGroup
+      aria-label={label}
+      selectionMode="single"
+      disallowEmptySelection
+      selectedKeys={[String(value)]}
+      onSelectionChange={keys => {
+        const [k] = [...keys];
+        if (k !== undefined) onChange(Number(k));
+      }}
+      className={`grid ${COLUMNS[columns]} ${columns === 4 ? 'gap-1' : ''}`}
+    >
+      {choices.map(c => (
+        <ToggleButton
+          key={c.id}
+          id={String(c.id)}
+          aria-label={c.name}
+          className={({ isSelected }) =>
+            `btn min-h-0 font-normal ${round && !c.span ? 'btn-circle size-touch mx-auto' : 'h-touch px-0'} ${c.span ? 'col-span-3' : ''} ${isSelected ? 'btn-primary' : 'btn-ghost bg-base-200'}`
+          }
+        >
+          {c.text}
+        </ToggleButton>
+      ))}
+    </ToggleButtonGroup>
+  );
+}
+
+const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
+
+/**
+ * How often something repeats: daily; weekly, on chosen weekdays or a number
+ * of times a week; monthly, on a day of the month or the last day; yearly, on
+ * a month and day. Everything is chosen by tapping, with no keyboard.
+ */
 export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: { label?: string; value: Cadence; onChange: (c: Cadence) => void } & DataAttributes) {
   const locale = safeLocale(useLocale().locale);
   const order = weekdayOrder(locale);
@@ -636,12 +700,30 @@ export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: {
   // Two letters (Mo Tu We Th Fr Sa Su), so no two buttons look alike as one-letter names do (Brian, 2026-11-26).
   const short = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   const long = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
+  const monthShort = new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' });
+  const monthLong = new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' });
   // 2026-11-23 is a Monday: ISO weekday n is that date plus n - 1 days.
   const dateOf = (d: Weekday) => new CalendarDate(2026, 11, 22 + d).toDate('UTC');
+  const monthDate = (m: number) => new CalendarDate(2026, m, 1).toDate('UTC');
+
+  // What was chosen before, so a switch to another kind and back keeps it.
+  const memory = useRef<CadenceMemory>({});
+  const lastWeekly = useRef<'weekly' | 'timesPerWeek'>('weekly');
+  (memory.current as Record<string, Cadence>)[value.kind] = value;
+  if (value.kind === 'weekly' || value.kind === 'timesPerWeek') lastWeekly.current = value.kind;
+  const switchTo = (kind: CadenceKind) => onChange(cadenceOfKind(kind, value, isoWeekday(todayLocal()), { memory: memory.current, anchor: todayLocal() }));
+
+  const isWeekly = value.kind === 'weekly' || value.kind === 'timesPerWeek';
   return (
     <div {...dataAttributes(rest)} className="fieldset gap-2">
       <span className="fieldset-legend text-small" id="cadence-label">{label}</span>
-      <SegmentedControl label={label} options={KINDS} value={value.kind} onChange={k => onChange(cadenceOfKind(k, value, isoWeekday(todayLocal())))} />
+      <SegmentedControl
+        label={label}
+        options={KINDS}
+        value={isWeekly ? 'weekly' : value.kind}
+        onChange={k => (k === 'weekly' ? (isWeekly ? undefined : switchTo(lastWeekly.current)) : switchTo(k))}
+      />
+      {isWeekly && <SegmentedControl label="Weekly repeat" options={WEEKLY_MODES} value={value.kind as 'weekly' | 'timesPerWeek'} onChange={switchTo} />}
       {value.kind === 'weekly' && (
         <ToggleButtonGroup
           aria-label="Weekdays"
@@ -662,10 +744,48 @@ export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: {
           ))}
         </ToggleButtonGroup>
       )}
+      {value.kind === 'timesPerWeek' && (
+        <ChoiceGrid
+          label="Times a week"
+          columns={6}
+          round
+          value={value.times}
+          choices={TIMES.map(n => ({ id: n, text: String(n), name: n === 1 ? '1 time a week' : `${n} times a week` }))}
+          onChange={n => onChange({ kind: 'timesPerWeek', times: n as TimesPerWeek })}
+        />
+      )}
+      {value.kind === 'monthly' && (
+        <ChoiceGrid
+          label="Day of the month"
+          columns={7}
+          round
+          value={value.day}
+          choices={[...range(1, 30).map(n => ({ id: n, text: String(n) })), { id: LAST_DAY, text: 'Last day', span: 3 as const }]}
+          onChange={day => onChange({ kind: 'monthly', day })}
+        />
+      )}
+      {value.kind === 'yearly' && (
+        <>
+          <ChoiceGrid
+            label="Month"
+            columns={4}
+            value={value.month}
+            choices={range(1, 12).map(m => ({ id: m, text: monthShort.format(monthDate(m)), name: monthLong.format(monthDate(m)) }))}
+            onChange={m => onChange(setYearlyMonth(value, m))}
+          />
+          <ChoiceGrid
+            label={`Day of ${monthLong.format(monthDate(value.month))}`}
+            columns={7}
+            round
+            value={value.day}
+            choices={range(1, maxDayOfMonth(value.month)).map(n => ({ id: n, text: String(n) }))}
+            onChange={day => onChange({ kind: 'yearly', month: value.month, day })}
+          />
+        </>
+      )}
     </div>
   );
 }
 
-export type { Cadence, CadenceKind, Weekday };
+export type { Cadence, CadenceKind, TimesPerWeek, Weekday };
 export { Time, CalendarDate };
-

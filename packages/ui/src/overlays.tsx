@@ -134,7 +134,9 @@ export function ConfirmDialog({
   useCloseOnBack(isOpen && closeOnBack, onCancel);
   const variant: ButtonVariant = destructive ? 'danger' : 'primary';
   return (
-    <ModalOverlay {...dataAttributes(rest)} isOpen={isOpen} onOpenChange={o => !o && onCancel()} isDismissable className="bg-scrim fixed inset-0 z-[1000] flex items-center justify-center p-6">
+    // data-react-aria-top-layer: a sheet under the dialog hides every element added after it opened from the page and from touch (`inert`),
+    // and on a phone the dialog's own overlay was sometimes added before React Aria made it visible again, so its buttons did nothing.
+    <ModalOverlay {...dataAttributes(rest)} data-react-aria-top-layer isOpen={isOpen} onOpenChange={o => !o && onCancel()} isDismissable className="bg-scrim fixed inset-0 z-[1000] flex items-center justify-center p-6">
       <Modal className="bg-raised rounded-box w-full max-w-sm p-5 shadow-xl">
         <Dialog role="alertdialog" className="outline-none">
           <Heading slot="title" className="text-title font-bold">{title}</Heading>

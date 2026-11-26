@@ -9,6 +9,7 @@ Schedule, cancel and list reminders
 - `allow-list`
 - `allow-capabilities`
 - `allow-take-opened`
+- `allow-open-settings`
 - `allow-register-listener`
 - `allow-remove-listener`
 
@@ -95,6 +96,32 @@ Enables the list command without any pre-configured scope.
 <td>
 
 Denies the list command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`droid-kit-reminders:allow-open-settings`
+
+</td>
+<td>
+
+Enables the open_settings command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`droid-kit-reminders:deny-open-settings`
+
+</td>
+<td>
+
+Denies the open_settings command without any pre-configured scope.
 
 </td>
 </tr>

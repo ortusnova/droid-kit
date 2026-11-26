@@ -1,7 +1,7 @@
 // Reminders on the Platform tab: schedule test reminders, see what is
 // scheduled, and which reminder opened the app.
 import { useEffect, useState } from 'react';
-import { cancel, capabilities, list, onReminderOpened, schedule, type Capabilities, type Reminder } from '@droid-kit/reminders';
+import { cancel, capabilities, list, onReminderOpened, openSettings, schedule, type Capabilities, type Reminder } from '@droid-kit/reminders';
 import { Button, Card } from '@droid-kit/ui';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -17,6 +17,7 @@ export function RemindersSection() {
   const [opened, setOpened] = useState<string>('none');
   const [openedCount, setOpenedCount] = useState(0);
   const [result, setResult] = useState<string>('');
+  const [denied, setDenied] = useState(false);
 
   const refresh = async () => {
     const r = await list();
@@ -47,6 +48,7 @@ export function RemindersSection() {
   const run = async (reminder: Reminder) => {
     const r = await schedule(reminder);
     setResult(r.ok ? `scheduled ${reminder.id}` : `error: ${JSON.stringify(r.error)}`);
+    setDenied(!r.ok && r.error.kind === 'permission-denied');
     await refresh();
   };
 
@@ -109,6 +111,11 @@ export function RemindersSection() {
         </Button>
       </div>
       <p className="text-small" id="reminder-result">{result}</p>
+      {denied && (
+        <Button id="open-settings" onPress={() => void openSettings()}>
+          Open settings
+        </Button>
+      )}
       <p className="text-small">
         Opened by: <span id="opened-id">{opened}</span> (<span id="opened-count">{openedCount}</span> times)
       </p>

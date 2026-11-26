@@ -75,7 +75,17 @@ export type Repeat =
 /**  Every day at `time`. */
 { kind: "daily"; time: string } | 
 /**  On each of `weekdays` (ISO: 1 = Monday … 7 = Sunday) at `time`. */
-{ kind: "weekly"; weekdays: number[]; time: string };
+{ kind: "weekly"; weekdays: number[]; time: string } | 
+/**
+ *  On `day` (1–31) of every month at `time`. In a shorter month it fires on
+ *  the last day, so 31 means "the last day of the month".
+ */
+{ kind: "monthly"; day: number; time: string } | 
+/**
+ *  Every year on `month` (1–12) and `day` at `time`. 29 February fires on
+ *  28 February in years without one.
+ */
+{ kind: "yearly"; month: number; day: number; time: string };
 
 /* Tauri Specta runtime */
 type EventEmit<T> = [T] extends [null] ? () => Promise<void> : (payload: T) => Promise<void>;

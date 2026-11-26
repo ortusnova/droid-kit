@@ -25,6 +25,12 @@ pub enum Repeat {
     Daily { time: String },
     /// On each of `weekdays` (ISO: 1 = Monday … 7 = Sunday) at `time`.
     Weekly { weekdays: Vec<u8>, time: String },
+    /// On `day` (1–31) of every month at `time`. In a shorter month it fires on
+    /// the last day, so 31 means "the last day of the month".
+    Monthly { day: u8, time: String },
+    /// Every year on `month` (1–12) and `day` at `time`. 29 February fires on
+    /// 28 February in years without one.
+    Yearly { month: u8, day: u8, time: String },
 }
 
 /// What this platform can do.
@@ -100,6 +106,20 @@ impl Reminder {
                     return Err(ReminderError::invalid("weekdays must be 1 (Monday) to 7 (Sunday), at least one"));
                 }
             }
+            Repeat::Monthly { day, time } => {
+                parse_time(time)?;
+                if !(1..=31).contains(day) {
+                    return Err(ReminderError::invalid("day must be 1 to 31 (31 means the last day of the month)"));
+                }
+            }
+            Repeat::Yearly { month, day, time } => {
+                parse_time(time)?;
+                // The longest each month can be; 29 February is allowed and falls on the 28th in other years.
+                const LONGEST: [u8; 12] = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+                if !(1..=12).contains(month) || *day == 0 || *day > LONGEST[*month as usize - 1] {
+                    return Err(ReminderError::invalid(format!("{month}-{day} is not a day of the year")));
+                }
+            }
         }
         Ok(())
     }
@@ -150,6 +170,38 @@ mod tests {
         assert!(r("a", Repeat::Once { date: "2026-13-01".into(), time: "07:00".into() }).validate().is_err());
         assert!(r("a", Repeat::Once { date: "2026-11-26".into(), time: "07:00".into() }).validate().is_ok());
         assert!(r("", Repeat::Daily { time: "07:00".into() }).validate().is_err());
+    }
+
+    #[test]
+    fn monthly_and_yearly_rules_validate() {
+        let monthly = |day| r("m", Repeat::Monthly { day, time: "09:00".into() }).validate();
+        assert!(monthly(1).is_ok());
+        assert!(monthly(31).is_ok());
+        assert!(monthly(0).is_err());
+        assert!(monthly(32).is_err());
+        assert!(r("m", Repeat::Monthly { day: 1, time: "9am".into() }).validate().is_err());
+        let yearly = |month, day| r("y", Repeat::Yearly { month, day, time: "08:00".into() }).validate();
+        assert!(yearly(2, 29).is_ok());
+        assert!(yearly(3, 15).is_ok());
+        assert!(yearly(12, 31).is_ok());
+        assert!(yearly(2, 30).is_err());
+        assert!(yearly(4, 31).is_err());
+        assert!(yearly(13, 1).is_err());
+        assert!(yearly(0, 1).is_err());
+        assert!(yearly(1, 0).is_err());
+    }
+
+    #[test]
+    fn monthly_and_yearly_serialize_as_the_app_sends_them() {
+        let m = serde_json::to_value(r("x", Repeat::Monthly { day: 31, time: "09:00".into() })).unwrap();
+        assert_eq!(m["repeat"], serde_json::json!({ "kind": "monthly", "day": 31, "time": "09:00" }));
+        let y = serde_json::to_value(r("x", Repeat::Yearly { month: 2, day: 29, time: "08:00".into() })).unwrap();
+        assert_eq!(y["repeat"], serde_json::json!({ "kind": "yearly", "month": 2, "day": 29, "time": "08:00" }));
+        let back: Reminder = serde_json::from_value(serde_json::json!({
+            "id": "x", "title": "t", "body": "b", "repeat": { "kind": "monthly", "day": 1, "time": "06:30" }
+        }))
+        .unwrap();
+        assert_eq!(back.repeat, Repeat::Monthly { day: 1, time: "06:30".into() });
     }
 
     #[test]

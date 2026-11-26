@@ -89,7 +89,54 @@ and `dk run linux-desktop`.
 `dk run` waits for the page to call `signalReady()` from `@droid-kit/platform`,
 then saves a screenshot and the app's log under `artifacts/`. It exits 1 if
 the page reports an error or the app exits, and 2 if no first screen appears
-within the timeout (90 seconds by default).
+within the timeout (90 seconds by default). On timeout it still saves a
+screenshot, so a hang can be seen.
+
+On `linux-desktop`:
+
+- The screenshot is taken by the app itself: the platform plugin (debug builds
+  only) writes a PNG of the app's own web view when `dk` sets `DK_SCREENSHOT`.
+  No window capture is involved, so no other window can end up in the picture,
+  whatever has focus. If the app cannot write one, `dk` says "no screenshot: …"
+  and the run's result is unchanged.
+- A container of an earlier run (`dk-<app>`, running or crashed) is removed
+  before the build and again before the start.
+- The host's locale variables (`LANG`, `LC_*`, `LANGUAGE`) go into the
+  container. Without them WebKitGTK reports `navigator.language` as `C`.
+
+### Errors the kit reports
+
+An uncaught error, an unhandled rejection and a route that fails to render are
+written to the log as `DK_ERROR …`, which makes `dk run` fail and name the
+error. For render errors give the router the kit's component:
+
+```tsx
+createRouter({ routeTree, defaultErrorComponent: RouteError })   // from @droid-kit/ui
+```
+
+`reportError(message)` from `@droid-kit/platform` does the same for an error
+the app catches itself.
+
+## In an app
+
+- **Back on Android.** `installBackHandler()` closes the topmost overlay that
+  has no history entry of its own, otherwise goes back in history, otherwise
+  sends the app to the background. A sheet or dialog the app keeps in the URL
+  (`?sheet=`) is a history entry and needs nothing more. Kit overlays that are
+  not in the URL close themselves on back, topmost first: the time picker's
+  panel, the date picker's calendar, a select's list, and `ConfirmDialog`
+  (`closeOnBack={false}` if the app keeps it in the history). A `Sheet` that is
+  not in the history sets `closeOnBack`. An app's own overlay uses
+  `pushBackInterceptor(close)` from `@droid-kit/platform`; it returns a function
+  that removes it again. Escape on a desktop is React Aria's, and closes only the
+  topmost overlay.
+- **`data-*` attributes.** Every kit component passes `data-*` props to its root
+  element, for test hooks and styles: `<CheckboxRow data-habit="sleep" … />`.
+- **Locales.** `dates.safeLocale(tag)` turns any value into a tag `Intl`
+  accepts (`en_US.utf8` becomes `en-US`; `C`, `POSIX` and invalid values become
+  `en-US`), and `dates.systemLocale()` is `navigator.language` through it. Use
+  them instead of passing `navigator.language` to `Intl`, which throws on `C`.
+  The kit's date components do this themselves.
 
 ### Settings
 

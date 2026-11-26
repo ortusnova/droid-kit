@@ -1004,6 +1004,7 @@ version = "0.2.0-rc.2"
 dependencies = [
  "cairo-rs",
  "javascriptcore-rs",
+ "objc2",
  "serde",
  "serde_json",
  "tauri",

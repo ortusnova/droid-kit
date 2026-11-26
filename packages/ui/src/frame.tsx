@@ -4,11 +4,12 @@
 import type { ReactNode } from 'react';
 import { Button, Link } from 'react-aria-components';
 import { ArrowLeft } from 'lucide-react';
+import { dataAttributes, type DataAttributes } from './dom';
 
 /** A full-height screen: app bar on top, tab bar at the bottom, content scrolling between. */
-export function AppShell({ appBar, tabBar, fab, children }: { appBar?: ReactNode; tabBar?: ReactNode; fab?: ReactNode; children: ReactNode }) {
+export function AppShell({ appBar, tabBar, fab, children, ...rest }: { appBar?: ReactNode; tabBar?: ReactNode; fab?: ReactNode; children: ReactNode } & DataAttributes) {
   return (
-    <div className="bg-background text-base-content flex h-dvh flex-col overflow-hidden">
+    <div {...dataAttributes(rest)} className="bg-background text-base-content flex h-dvh flex-col overflow-hidden">
       {appBar}
       <div className="relative min-h-0 flex-1">
         <main data-scroll-restoration-id="main" className="h-full overflow-x-hidden overflow-y-auto pb-24" style={{ paddingLeft: 'var(--dk-inset-left)', paddingRight: 'var(--dk-inset-right)' }}>
@@ -25,9 +26,10 @@ export function AppShell({ appBar, tabBar, fab, children }: { appBar?: ReactNode
  * The bar at the top of a screen. Pass `onBack` on screens below a tab's root:
  * Linux phones have no system back action, so this is their only way back.
  */
-export function AppBar({ title, subtitle, onBack, actions }: { title: string; subtitle?: string; onBack?: () => void; actions?: ReactNode }) {
+export function AppBar({ title, subtitle, onBack, actions, ...rest }: { title: string; subtitle?: string; onBack?: () => void; actions?: ReactNode } & DataAttributes) {
   return (
     <header
+      {...dataAttributes(rest)}
       className="navbar bg-base-100 border-divider z-10 min-h-0 shrink-0 gap-1 border-b px-2"
       style={{ paddingTop: 'calc(0.5rem + var(--dk-inset-top))', paddingLeft: 'calc(0.5rem + var(--dk-inset-left))', paddingRight: 'calc(0.5rem + var(--dk-inset-right))' }}
     >
@@ -56,9 +58,10 @@ export interface Tab {
  * The bottom tab bar. Tabs are links: wrap the app in React Aria's
  * RouterProvider so they navigate with the app's router.
  */
-export function TabBar({ tabs, active }: { tabs: Tab[]; active: string }) {
+export function TabBar({ tabs, active, ...rest }: { tabs: Tab[]; active: string } & DataAttributes) {
   return (
     <nav
+      {...dataAttributes(rest)}
       aria-label="Sections"
       className="dock bg-base-100 border-divider relative shrink-0 border-t"
       style={{ height: 'auto', paddingBottom: 'var(--dk-inset-bottom)', paddingLeft: 'var(--dk-inset-left)', paddingRight: 'var(--dk-inset-right)' }}
@@ -86,18 +89,18 @@ export function TabBar({ tabs, active }: { tabs: Tab[]; active: string }) {
  * pointer events on its first child once it has focus, so a finger tap,
  * which focuses on press, never reaches the button on Android.
  */
-export function Fab({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
+export function Fab({ label, onPress, children, ...rest }: { label: string; onPress: () => void; children: ReactNode } & DataAttributes) {
   return (
-    <Button aria-label={label} onPress={onPress} className="btn btn-primary btn-circle size-14 shadow-lg">
+    <Button {...dataAttributes(rest)} aria-label={label} onPress={onPress} className="btn btn-primary btn-circle size-14 shadow-lg">
       {children}
     </Button>
   );
 }
 
 /** An icon-only button with a touch-sized hit area. `label` is its accessible name. */
-export function IconButton({ label, onPress, children, isDisabled }: { label: string; onPress?: () => void; children: ReactNode; isDisabled?: boolean }) {
+export function IconButton({ label, onPress, children, isDisabled, ...rest }: { label: string; onPress?: () => void; children: ReactNode; isDisabled?: boolean } & DataAttributes) {
   return (
-    <Button aria-label={label} onPress={onPress} isDisabled={isDisabled} className="btn btn-ghost btn-circle size-touch">
+    <Button {...dataAttributes(rest)} aria-label={label} onPress={onPress} isDisabled={isDisabled} className="btn btn-ghost btn-circle size-touch">
       {children}
     </Button>
   );

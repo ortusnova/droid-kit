@@ -3,18 +3,36 @@
 import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from 'react';
 import { Dialog, Heading, Modal, ModalOverlay, Sheet as AriaSheet, SheetBackdrop, SheetContent, SheetOverlay } from 'react-aria-components';
 import { Button, type ButtonVariant } from './controls';
+import { useCloseOnBack } from './back';
+import { dataAttributes, type DataAttributes } from './dom';
 
 /**
  * A bottom sheet. It closes by a downward swipe, a tap on the backdrop and
  * Escape, which all call `onClose`. For the Android back action, put the
  * sheet's open state in the app's history (for example a search parameter),
- * so the back action closes it like any other screen.
+ * so the back action closes it like any other screen. A sheet that is not in
+ * the history (the time picker's panel is one) sets `closeOnBack`: the back
+ * action then calls `onClose`, for the topmost such overlay only.
  */
-export function Sheet({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Sheet({
+  isOpen,
+  onClose,
+  title,
+  children,
+  closeOnBack = false,
+  ...rest
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  closeOnBack?: boolean;
+} & DataAttributes) {
   const overlay = useRef<HTMLDivElement>(null);
   useSheetWorkaround(overlay, isOpen);
+  useCloseOnBack(isOpen && closeOnBack, onClose);
   return (
-    <SheetOverlay ref={overlay} className="dk-sheet-overlay" isOpen={isOpen} onOpenChange={open => !open && onClose()}>
+    <SheetOverlay {...dataAttributes(rest)} ref={overlay} className="dk-sheet-overlay" isOpen={isOpen} onOpenChange={open => !open && onClose()}>
       <SheetBackdrop className="dk-sheet-backdrop" swipeAnimation="dk-sheet-backdrop" />
       <AriaSheet className="dk-sheet" overscrollPadding>
         <div className="dk-sheet-handle" aria-hidden />
@@ -84,7 +102,11 @@ function keepFocusedFieldVisible(e: FocusEvent) {
   window.visualViewport?.addEventListener('resize', reveal, { once: true });
 }
 
-/** A question with a cancel and a confirm action. */
+/**
+ * A question with a cancel and a confirm action. The Android back action
+ * cancels it, unless `closeOnBack` is false because the app keeps the dialog
+ * in the history.
+ */
 export function ConfirmDialog({
   isOpen,
   onCancel,
@@ -94,6 +116,8 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel = 'Cancel',
   destructive,
+  closeOnBack = true,
+  ...rest
 }: {
   isOpen: boolean;
   onCancel: () => void;
@@ -103,10 +127,12 @@ export function ConfirmDialog({
   confirmLabel: string;
   cancelLabel?: string;
   destructive?: boolean;
-}) {
+  closeOnBack?: boolean;
+} & DataAttributes) {
+  useCloseOnBack(isOpen && closeOnBack, onCancel);
   const variant: ButtonVariant = destructive ? 'danger' : 'primary';
   return (
-    <ModalOverlay isOpen={isOpen} onOpenChange={o => !o && onCancel()} isDismissable className="bg-scrim fixed inset-0 z-[1000] flex items-center justify-center p-6">
+    <ModalOverlay {...dataAttributes(rest)} isOpen={isOpen} onOpenChange={o => !o && onCancel()} isDismissable className="bg-scrim fixed inset-0 z-[1000] flex items-center justify-center p-6">
       <Modal className="bg-raised rounded-box w-full max-w-sm p-5 shadow-xl">
         <Dialog role="alertdialog" className="outline-none">
           <Heading slot="title" className="text-title font-bold">{title}</Heading>

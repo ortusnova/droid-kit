@@ -8,6 +8,7 @@ import {
   from12Hour,
   isoWeekday,
   minuteChoices,
+  safeLocale,
   snapMinute,
   to12Hour,
   toggleWeekday,
@@ -89,5 +90,28 @@ describe('dial dragging', () => {
     expect(dialHour(at(0), true)).toBe(0);
     expect(dialHour(at(5), true)).toBe(13);
     expect(dialHour(at(55), true)).toBe(23);
+  });
+});
+
+describe('locales from the environment', () => {
+  it('turns POSIX locale names into language tags', () => {
+    expect(safeLocale('en_US.utf8')).toBe('en-US');
+    expect(safeLocale('de_DE@euro')).toBe('de-DE');
+    expect(safeLocale('fr_CA.UTF-8')).toBe('fr-CA');
+  });
+  it('keeps a valid tag, extensions included', () => {
+    expect(safeLocale('en-GB')).toBe('en-GB');
+    expect(safeLocale('en-US-u-fw-mon')).toBe('en-US-u-fw-mon');
+  });
+  it('falls back to en-US for C, POSIX, empty and invalid values', () => {
+    for (const bad of ['C', 'c', 'POSIX', 'C.UTF-8', '', '  ', null, undefined, '???', 'x_y_z_!!']) {
+      expect(safeLocale(bad as string | null | undefined)).toBe('en-US');
+    }
+  });
+  it('gives the date logic a usable locale whatever it is passed', () => {
+    expect(() => weekdayOrder('C')).not.toThrow();
+    expect(() => weekOf(new CalendarDate(2026, 11, 25), 'C')).not.toThrow();
+    expect(uses12HourClock('C')).toBe(true);
+    expect(weekdayOrder('C')[0]).toBe(7);
   });
 });

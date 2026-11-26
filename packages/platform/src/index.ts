@@ -1,5 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { onBackButtonPress } from '@tauri-apps/api/app';
+import { runBackInterceptor } from './back';
+
+export { pushBackInterceptor, runBackInterceptor } from './back';
 
 export const VERSION = '0.1.0';
 
@@ -100,13 +103,16 @@ export function moveToBackground(): Promise<void> {
 }
 
 /**
- * Android back action: go back in the app's history if there is any,
- * otherwise send the app to the background. Each screen and each open sheet
- * is a history entry, so back closes the topmost sheet first.
+ * Android back action: close the topmost overlay that has no history entry
+ * (see `pushBackInterceptor`), otherwise go back in the app's history if there
+ * is any, otherwise send the app to the background. Each screen and each open
+ * sheet that the app keeps in the URL is a history entry, so back closes the
+ * topmost sheet first.
  */
 export async function installBackHandler(): Promise<() => void> {
   if (!isTauri || dk().platform !== 'android') return () => {};
   const listener = await onBackButtonPress(({ canGoBack }) => {
+    if (runBackInterceptor()) return;
     if (canGoBack) history.back();
     else void moveToBackground();
   });
@@ -115,23 +121,34 @@ export async function installBackHandler(): Promise<() => void> {
 
 /**
  * Tell `dk run` that the first screen has rendered. Call once, after the
- * first commit. Waits two frames so the content has been painted.
+ * first commit. Waits two frames so the content has been painted, but no
+ * longer than a second: a window that is covered by another one gets no
+ * frames, and `dk run` must not wait for them.
  */
 export function signalReady(): void {
-  requestAnimationFrame(() =>
-    requestAnimationFrame(() => {
-      console.log('DK_READY');
-      if (isTauri) invoke('plugin:droid-kit-platform|ready').catch(() => {});
-    }),
-  );
+  let signalled = false;
+  const signal = () => {
+    if (signalled) return;
+    signalled = true;
+    console.log('DK_READY');
+    if (isTauri) invoke('plugin:droid-kit-platform|ready').catch(() => {});
+  };
+  requestAnimationFrame(() => requestAnimationFrame(signal));
+  setTimeout(signal, 1000);
+}
+
+/**
+ * Writes an error to the app's log as `DK_ERROR <message>`, where `dk run`
+ * looks for it. Newlines are folded so the message stays on one log line.
+ */
+export function reportError(message: string): void {
+  const line = message.replace(/\s*\n\s*/g, ' | ');
+  console.error(`DK_ERROR ${line}`);
+  if (isTauri) invoke('plugin:droid-kit-platform|report_error', { message: line }).catch(() => {});
 }
 
 /** Send uncaught errors to the app's log, where `dk run` looks for them. */
 export function reportErrors(): void {
-  const send = (message: string) => {
-    console.error(`DK_ERROR ${message}`);
-    if (isTauri) invoke('plugin:droid-kit-platform|report_error', { message }).catch(() => {});
-  };
-  addEventListener('error', e => send(`${e.message} at ${e.filename}:${e.lineno}`));
-  addEventListener('unhandledrejection', e => send(`unhandled rejection: ${String(e.reason)}`));
+  addEventListener('error', e => reportError(`${e.message} at ${e.filename}:${e.lineno}`));
+  addEventListener('unhandledrejection', e => reportError(`unhandled rejection: ${String(e.reason)}`));
 }

@@ -93,6 +93,11 @@ pub fn ensure_permission<R: Runtime>(_app: &AppHandle<R>) -> Result<(), Reminder
     Ok(())
 }
 
+/// There is no notification permission on Linux, so there is no setting to open.
+pub fn open_settings<R: Runtime>(_app: &AppHandle<R>) -> Result<(), ReminderError> {
+    Ok(())
+}
+
 pub fn schedule<R: Runtime>(_app: &AppHandle<R>, _reminder: &Reminder, _utc_offset_minutes: i32) -> Result<(), ReminderError> {
     Ok(())
 }

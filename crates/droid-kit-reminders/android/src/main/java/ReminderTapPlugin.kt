@@ -1,7 +1,10 @@
 package com.ortusnova.droidkit.reminders
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.webkit.WebView
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
@@ -33,6 +36,16 @@ class ReminderTapPlugin(private val activity: Activity) : Plugin(activity) {
     override fun load(webView: WebView) {
         super.load(webView)
         activity.intent?.let { remember(it, notify = false) }
+        // A force-stop removes every alarm, and a reminder may have come due while the app was closed:
+        // bring them up to date. Off the main thread, because it reads and writes files; it never calls Rust.
+        val context = activity.applicationContext
+        Thread {
+            try {
+                Reminders.restoreAll(context)
+            } catch (e: Exception) {
+                android.util.Log.w("droid-kit-reminders", "cannot restore reminders at start: $e")
+            }
+        }.start()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -65,6 +78,24 @@ class ReminderTapPlugin(private val activity: Activity) : Plugin(activity) {
     fun cancel(invoke: Invoke) {
         val args = invoke.parseArgs(CancelArgs::class.java)
         Reminders.cancel(activity.applicationContext, args.id)
+        invoke.resolve()
+    }
+
+    /** Opens the app's notification settings, or its details page if the system has no such screen. */
+    @Command
+    fun openSettings(invoke: Invoke) {
+        val context = activity.applicationContext
+        val notifications = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            activity.startActivity(notifications)
+        } catch (e: ActivityNotFoundException) {
+            activity.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
         invoke.resolve()
     }
 

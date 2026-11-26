@@ -25,6 +25,12 @@ export const commands = {
 	 *  start-up: a tap that starts the app arrives before the page can listen.
 	 */
 	takeOpened: (options?: InvokeOptions) => __TAURI_INVOKE<string | null>("plugin:droid-kit-reminders|take_opened", undefined, options),
+	/**
+	 *  Opens the system's notification settings for this app, where the user can
+	 *  allow notifications after refusing them. Does nothing where there is no
+	 *  such permission (Linux).
+	 */
+	openSettings: (options?: InvokeOptions) => __TAURI_INVOKE<null>("plugin:droid-kit-reminders|open_settings", undefined, options),
 };
 
 /** Events */

@@ -225,6 +225,7 @@ object Reminders {
     }
 
     fun show(context: Context, reminder: JSONObject) {
+        android.util.Log.i("droid-kit-reminders", "delivering ${reminder.optString("id")} at ${System.currentTimeMillis()}")
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager.getNotificationChannel(CHANNEL) == null) {
             manager.createNotificationChannel(NotificationChannel(CHANNEL, "Reminders", NotificationManager.IMPORTANCE_HIGH))

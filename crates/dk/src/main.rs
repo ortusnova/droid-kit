@@ -4,6 +4,7 @@ mod android;
 mod check;
 mod config;
 mod doctor;
+mod ios;
 mod kit;
 mod linux;
 mod new;
@@ -108,6 +109,8 @@ enum Target {
     AndroidPhone,
     AndroidEmulator,
     LinuxDesktop,
+    /// An iPhone on USB, built here with xtool and signed with your Apple ID.
+    IosPhone,
 }
 
 fn main() -> ExitCode {
@@ -124,6 +127,7 @@ fn main() -> ExitCode {
             (Target::AndroidPhone, None) if !no_build => android::run_phone(&app, timeout),
             (Target::AndroidEmulator, None) if !no_build => android::run_emulator(&app),
             (Target::LinuxDesktop, route) => linux::run_desktop(&app, timeout, route.as_deref(), !no_build),
+            (Target::IosPhone, None) if !no_build => ios::run_phone(&app, timeout),
             (_, Some(_)) => Err(anyhow::anyhow!("--route works with linux-desktop only")),
             (_, None) => Err(anyhow::anyhow!("--no-build works with linux-desktop only")),
         }),

@@ -22,5 +22,9 @@ java_script_core = { version = "=1.1.2", package = "javascriptcore-rs" }
 webkit2gtk = { version = "=2.0.2", features = ["v2_40"] }
 cairo-rs = { version = "=0.18.5", features = ["png"] }
 
+[target.'cfg(target_os = "ios")'.dependencies]
+# The same version as wry's, so the build has one copy.
+objc2 = "=0.6.5"
+
 [build-dependencies]
 tauri-plugin = { workspace = true }

@@ -143,7 +143,12 @@ fn engine() -> (&'static str, Option<String>) {
         // The reduced user agent still carries the WebView's major version.
         ("android-webview", None)
     }
-    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    #[cfg(target_os = "ios")]
+    {
+        // WKWebView is the system's WebKit, which is updated with iOS: its version is the iOS version.
+        ("wkwebview", ios_version())
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "ios")))]
     {
         ("unknown", None)
     }
@@ -163,6 +168,43 @@ fn engine() -> (&'static str, Option<String>) {
 #[cfg(target_os = "linux")]
 fn set_window_app_id(identifier: &str) {
     webkit2gtk::glib::set_prgname(Some(identifier));
+}
+
+/// The iOS version, e.g. "18.6".
+#[cfg(target_os = "ios")]
+fn ios_version() -> Option<String> {
+    use objc2::{class, msg_send, runtime::AnyObject};
+    // SAFETY: UIDevice.currentDevice.systemVersion is an NSString that lives as long as the device object.
+    unsafe {
+        let device: *mut AnyObject = msg_send![class!(UIDevice), currentDevice];
+        let version: *mut AnyObject = msg_send![device.as_ref()?, systemVersion];
+        let utf8: *const std::ffi::c_char = msg_send![version.as_ref()?, UTF8String];
+        (!utf8.is_null()).then(|| std::ffi::CStr::from_ptr(utf8).to_string_lossy().into_owned())
+    }
+}
+
+/// iOS: lets the page fill the whole screen. WKWebView's scroll view shrinks
+/// the page's viewport by the safe areas by default, and the page (which uses
+/// `viewport-fit=cover`) also pads itself by `env(safe-area-inset-*)`, so each
+/// inset was counted twice and a blank band was left at the bottom.
+#[cfg(target_os = "ios")]
+fn fill_screen<R: Runtime>(webview: &tauri::Webview<R>) {
+    use objc2::{msg_send, runtime::AnyObject};
+    // UIScrollViewContentInsetAdjustmentNever
+    const NEVER: isize = 2;
+    let _ = webview.with_webview(|platform| {
+        let webview = platform.inner().cast::<AnyObject>();
+        if webview.is_null() {
+            return;
+        }
+        // SAFETY: `inner` is the live WKWebView, and `with_webview` runs this on the main thread.
+        unsafe {
+            let scroll_view: *mut AnyObject = msg_send![&*webview, scrollView];
+            if let Some(scroll_view) = scroll_view.as_ref() {
+                let _: () = msg_send![scroll_view, setContentInsetAdjustmentBehavior: NEVER];
+            }
+        }
+    });
 }
 
 fn init_script() -> String {
@@ -195,6 +237,10 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(all(target_os = "linux", debug_assertions))]
             evalchannel::start(app.clone());
             Ok(())
+        })
+        .on_webview_ready(|_webview| {
+            #[cfg(target_os = "ios")]
+            fill_screen(&_webview);
         })
         .build()
 }

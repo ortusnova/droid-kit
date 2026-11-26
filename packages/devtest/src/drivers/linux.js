@@ -58,25 +58,46 @@ function pageHelpers() {
     return /** @type {HTMLElement} */ (el);
   };
 
-  /** Scrolls the element into view the way a person would: the sheet's content, or the page's main area. Never `scrollIntoView` (it scrolls a sheet's swipe scroller). */
-  /** @param {HTMLElement} el */
+  /**
+   * Scrolls the element into view the way a person would: each scrollable box around it (a list, a sheet's
+   * content, the page's main area), nearest first, is scrolled until the element is inside it. Never the sheet's own
+   * swipe scroller (`.dk-sheet`) and never `scrollIntoView`: both would read as a swipe to dismiss.
+   * @param {HTMLElement} el
+   */
   const reveal = el => {
-    const inView = () => {
+    for (let box = el.parentElement; box && box !== document.documentElement; box = box.parentElement) {
+      if (box.classList.contains('dk-sheet') || box.hasAttribute('data-sheet-scroll')) continue;
+      const overflow = getComputedStyle(box).overflowY;
+      if (!/(auto|scroll)/.test(overflow) || box.scrollHeight <= box.clientHeight) continue;
       const r = el.getBoundingClientRect();
-      return r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth;
-    };
-    if (inView()) return;
-    const sheet = el.closest('.dk-sheet-content');
-    const scroller = sheet ?? document.querySelector('[data-scroll-restoration-id="main"]');
-    if (scroller) {
+      const b = box.getBoundingClientRect();
+      const top = Math.max(b.top, 0);
+      const bottom = Math.min(b.bottom, innerHeight);
+      if (r.top >= top && r.bottom <= bottom) continue;
+      box.scrollBy({ top: r.top + r.height / 2 - (top + bottom) / 2, behavior: 'instant' });
+    }
+  };
+
+  const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
+
+  /** Waits until the element has stopped moving (a sheet sliding in, a list scrolling to a focused field), up to about a second. @param {HTMLElement} el */
+  const stable = async el => {
+    let last = '';
+    for (let i = 0; i < 60; i++) {
       const r = el.getBoundingClientRect();
-      scroller.scrollBy({ top: r.top + r.height / 2 - innerHeight / 2, behavior: 'instant' });
+      const key = [r.left, r.top, r.width, r.height].map(Math.round).join(',');
+      if (key === last) return;
+      last = key;
+      await frame();
     }
   };
 
   /** @param {HTMLElement} el */
-  const centre = el => {
+  const centre = async el => {
     reveal(el);
+    await stable(el);
+    reveal(el);
+    await stable(el);
     const r = el.getBoundingClientRect();
     if (r.width === 0 || r.height === 0) throw new Error(`the element ${el.tagName.toLowerCase()} has no size, so it cannot be tapped`);
     const x = r.left + r.width / 2;
@@ -86,14 +107,15 @@ function pageHelpers() {
   };
 
   /**
-   * What a finger would hit at that point, and it must be the element or inside it (or the element
-   * inside what is hit, such as a label around a checkbox): a covered element is an error, as it is on a phone.
+   * What a finger would hit at that point: it must be the element or something inside it. A covered element is an error, as it is on a phone.
    * @param {HTMLElement} el @param {number} x @param {number} y
    */
   const hit = (el, x, y) => {
     const top = document.elementFromPoint(x, y);
     if (!top) throw new Error('nothing at the middle of the element');
-    if (!(el.contains(top) || top.contains(el))) {
+    // The element or something inside it (a label's text, an icon). A hidden checkbox is tapped through its label.
+    const ok = el.contains(top) || (el instanceof HTMLInputElement && top.contains(el) && top.tagName === 'LABEL');
+    if (!ok) {
       throw new Error(`the middle of the element is covered by ${top.tagName.toLowerCase()}${top.className ? `.${String(top.className).trim().split(/\s+/).join('.')}` : ''}`);
     }
     return top;
@@ -126,13 +148,11 @@ function pageHelpers() {
   const mouse = (target, type, x, y) =>
     target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, composed: true, clientX: x, clientY: y, screenX: x, screenY: y, button: 0, buttons: type === 'mouseup' || type === 'click' ? 0 : 1, detail: 1, view: window }));
 
-  const frame = () => new Promise(resolve => requestAnimationFrame(() => resolve(undefined)));
-
   return {
     /** A tap: the pointer sequence of a touch, then the click that follows it. */
     async tap(/** @type {string} */ selector) {
       const el = find(selector);
-      const { x, y } = centre(el);
+      const { x, y } = await centre(el);
       const target = hit(el, x, y);
       pointer(target, 'pointerover', x, y);
       pointer(target, 'pointerenter', x, y);
@@ -156,7 +176,7 @@ function pageHelpers() {
      */
     async swipe(/** @type {string} */ selector, /** @type {'up' | 'down' | 'left' | 'right'} */ direction) {
       const el = find(selector);
-      const { x, y } = centre(el);
+      const { x, y } = await centre(el);
       const target = hit(el, x, y);
       const vertical = direction === 'up' || direction === 'down';
       const distance = Math.round((vertical ? innerHeight : innerWidth) * 0.6);
@@ -218,11 +238,11 @@ function pageHelpers() {
 
     /** What the system's back would do on Android, with the means a desktop has. */
     async back() {
-      const overlay = document.querySelector('[role="listbox"], [role="dialog"], [role="alertdialog"]');
-      const popup = overlay?.closest('[data-trigger], [role="dialog"], .react-aria-Popover') ?? null;
+      // A select's list or a confirmation closes first, as the Android back action closes the topmost overlay
+      // that has no history entry; a sheet in the URL is a history entry, and `history.back()` closes it.
       const index = /** @type {{ __TSR_index?: number } | null} */ (history.state)?.__TSR_index;
-      if (popup && !document.querySelector('.dk-sheet-overlay')) {
-        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+      if (document.querySelector('[role="listbox"], [role="alertdialog"]')) {
+        (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
         await frame();
         return 'escape (an overlay was open)';
       }

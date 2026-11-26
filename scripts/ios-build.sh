@@ -46,6 +46,7 @@ export CARGO_TARGET_AARCH64_APPLE_IOS_LINKER=$OUT/bin/ios-cc
 CONF=$APP/src-tauri/tauri.conf.json
 PRODUCT=$(jq -r .productName "$CONF")
 IDENTIFIER=$(jq -r .identifier "$CONF")
+VERSION=$(jq -r .version "$CONF")
 # The Swift package name: the product name in PascalCase (life-droid -> LifeDroid).
 NAME=$(echo "$PRODUCT" | sed -E 's/(^|[-_ ])([a-z])/\U\2/g; s/[^A-Za-z0-9]//g')
 
@@ -148,9 +149,25 @@ struct Entry {
     }
 }
 EOF
+# The home-screen name is the product name, as Android's launcher label is.
+xml() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' <<<"$1"; }
+cat > "$OUT/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>$(xml "$PRODUCT")</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$(xml "$VERSION")</string>
+</dict>
+</plist>
+EOF
 cat > "$OUT/xtool.yml" <<EOF
 version: 1
 bundleID: $IDENTIFIER
+infoPath: Info.plist
+iconPath: $APP/src-tauri/icons/icon.png
 EOF
 
 # 5. Build, and for `run` sign and install. With a free Apple ID, xtool

@@ -57,6 +57,8 @@ enum Event {
     WakeCallback(i32),
     /// A notification action was invoked.
     Action(u32, String),
+    /// Open the app for this reminder, as a tap on its notification does.
+    Open(String),
     /// The device resumed from suspend.
     Resumed,
     /// PowerDevil appeared or went away: its wake-up list is empty again.
@@ -78,6 +80,11 @@ impl Service {
 
     fn reload(&self) {
         let _ = self.events.send(Event::Changed);
+    }
+
+    /// Does what the default action of a reminder's notification does: opens the app with this id.
+    fn open_reminder(&self, id: String) {
+        let _ = self.events.send(Event::Open(id));
     }
 }
 
@@ -249,6 +256,7 @@ impl Daemon {
                 self.refresh_wake_support().await;
             }
             Event::Action(id, key) => self.action(id, key).await,
+            Event::Open(reminder) => self.open(&reminder).await,
         }
     }
 
@@ -420,8 +428,12 @@ impl Daemon {
         if key != "default" && key != "open" {
             return;
         }
-        log!("notification {notification} ({reminder}) tapped: opening the app");
-        if let Err(e) = self.open_app(&reminder).await {
+        log!("notification {notification} ({reminder}) tapped");
+        self.open(&reminder).await;
+    }
+
+    async fn open(&self, reminder: &str) {
+        if let Err(e) = self.open_app(reminder).await {
             log!("could not open the app for {reminder}: {e}");
         }
     }

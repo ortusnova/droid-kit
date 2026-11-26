@@ -926,7 +926,7 @@ dependencies = [
 
 [[package]]
 name = "dk"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -1000,7 +1000,7 @@ dependencies = [
 
 [[package]]
 name = "droid-kit-platform"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "cairo-rs",
  "serde",
@@ -1014,7 +1014,7 @@ dependencies = [
 
 [[package]]
 name = "droid-kit-reminderd"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures-util",
  "jiff 1.0.3",
@@ -1026,7 +1026,7 @@ dependencies = [
 
 [[package]]
 name = "droid-kit-reminders"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "droid-kit-reminderd",
  "futures-lite",
@@ -1044,7 +1044,7 @@ dependencies = [
 
 [[package]]
 name = "droid-kit-tokens"
-version = "0.1.1"
+version = "0.1.2"
 
 [[package]]
 name = "dtoa"
@@ -1343,7 +1343,7 @@ dependencies = [
 
 [[package]]
 name = "gallery"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "droid-kit-platform",
  "droid-kit-reminders",

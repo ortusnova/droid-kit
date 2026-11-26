@@ -261,6 +261,10 @@ export async function example() {
   `memoryBackend({ path })` keeps a file, to test a restart; `now` in the
   options sets the clock the record helpers stamp with.
 
+## Plugin commands that call into Kotlin
+
+A command that calls into Kotlin must be `async` and use `run_mobile_plugin_async(...).await`, never `run_mobile_plugin`. Tauri runs a sync command while it holds the plugin store's lock, and Kotlin often answers from Android's main thread, which takes that lock when a page finishes loading, so the app can stop responding. Never call `run_mobile_plugin` from a callback on Android's main thread either.
+
 ## Releasing
 
 A release is one tag, `vX.Y.Z`, and every manifest at the tag has the version

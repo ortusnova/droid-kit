@@ -55,7 +55,8 @@ describe('the parts of the Android driver that need no device', () => {
     expect(inputText('a.b,c:d;e@f_g/h+i=j-k 9')).toBe('a.b,c:d;e@f_g/h+i=j-k%s9');
     expect(() => inputText("it's")).toThrow(/cannot type "'"/);
     expect(() => inputText('café')).toThrow(/cannot type "é"/);
-    expect(() => inputText('a&b')).toThrow();
+    expect(inputText('Read (daily) & "more"')).toBe('Read%s(daily)%s&%s"more"');
+    expect(() => inputText('100%')).toThrow(/cannot type "%"/);
   });
 
   it('finds a notification in the shade, and the header that expands its group', () => {
@@ -147,7 +148,7 @@ esac
 
   it('refuses to type what it cannot type, before touching anything', async () => {
     const d = await createDriver(context);
-    await expect(d.type('#name', "it's")).rejects.toThrow(/plain text only/);
+    await expect(d.type('#name', "it's")).rejects.toThrow(/printable ASCII/);
     await d.close();
   });
 });

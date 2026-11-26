@@ -46,14 +46,22 @@ function pageHelpers() {
     return /** @type {HTMLElement} */ (el);
   };
 
-  /** The visible height of the page: the keyboard, if open, takes its share. */
-  const visibleHeight = () => window.visualViewport?.height ?? innerHeight;
+  /**
+   * The part of the page the screen shows, in the page's coordinates. The keyboard does not resize the layout viewport:
+   * it shrinks the visual viewport and moves it down the page, so what a finger touches is `rect - offset`.
+   */
+  const visible = () => {
+    const v = window.visualViewport;
+    return { left: v?.offsetLeft ?? 0, top: v?.offsetTop ?? 0, width: v?.width ?? innerWidth, height: v?.height ?? innerHeight };
+  };
 
   /**
    * Scrolls the element's scroll container (never the document) until the element's middle is in its visible part.
-   * @param {HTMLElement} el
+   * With `place` (0 to 1) it goes to that fraction of the visible part, whatever it is now: a way out from under a fixed
+   * control (the sheet's handle, the floating action button, the tab bar).
+   * @param {HTMLElement} el @param {number} [place]
    */
-  const reveal = async el => {
+  const reveal = async (el, place) => {
     const scroller = el.closest('.dk-sheet-content') ?? (() => {
       const main = document.querySelector('[data-scroll-restoration-id="main"]');
       return main && main.contains(el) ? main : null;
@@ -61,13 +69,23 @@ function pageHelpers() {
     if (!scroller) return;
     const r = el.getBoundingClientRect();
     const s = scroller.getBoundingClientRect();
-    const top = Math.max(s.top, 0);
-    const bottom = Math.min(s.bottom, visibleHeight());
+    const v = visible();
+    const top = Math.max(s.top, v.top);
+    const bottom = Math.min(s.bottom, v.top + v.height);
     const middle = r.top + r.height / 2;
-    if (middle >= top + 8 && middle <= bottom - 8) return;
-    scroller.scrollBy({ top: middle - (top + bottom) / 2, behavior: 'instant' });
+    if (place === undefined && middle >= top + 8 && middle <= bottom - 8) return;
+    scroller.scrollBy({ top: middle - (top + (bottom - top) * (place ?? 0.5)), behavior: 'instant' });
     await frame();
     await frame();
+  };
+
+  /** What a finger at the element's middle would land on, if that is not the element: a description, or null. */
+  const coveredBy = (/** @type {HTMLElement} */ el) => {
+    const r = el.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    if (!top) return 'nothing';
+    if (el.contains(top) || top.contains(el)) return null;
+    return `${top.tagName.toLowerCase()}${top.className ? `.${String(top.className).trim().split(/\s+/).join('.')}` : ''}`;
   };
 
   return {
@@ -84,21 +102,25 @@ function pageHelpers() {
         await reveal(el);
         r = el.getBoundingClientRect();
         const still = last !== null && Math.abs(r.top - last.top) < 1 && Math.abs(r.left - last.left) < 1;
-        const onScreen = r.width > 0 && r.height > 0 && r.left + r.width / 2 >= 0 && r.left + r.width / 2 <= innerWidth && r.top + r.height / 2 >= 0 && r.top + r.height / 2 <= innerHeight;
+        const v = visible();
+        const onScreen = r.width > 0 && r.height > 0 && r.left + r.width / 2 >= v.left && r.left + r.width / 2 <= v.left + v.width && r.top + r.height / 2 >= v.top && r.top + r.height / 2 <= v.top + v.height;
         if (still && onScreen) break;
         last = r;
         await pause(100);
       }
       if (r.width === 0 || r.height === 0) throw new Error(`${selector} has no size, so it cannot be touched`);
-      const x = r.left + r.width / 2;
-      const y = r.top + r.height / 2;
-      if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) throw new Error(`${selector} is not on the screen at (${Math.round(x)}, ${Math.round(y)})`);
-      const top = document.elementFromPoint(x, y);
-      /** @type {string | null} */
-      let covered = null;
-      if (!top) covered = 'nothing';
-      else if (!(el.contains(top) || top.contains(el))) covered = `${top.tagName.toLowerCase()}${top.className ? `.${String(top.className).trim().split(/\s+/).join('.')}` : ''}`;
-      return { x, y, dpr: devicePixelRatio, innerWidth, innerHeight, covered };
+      // Under a fixed control: scroll it to other places in its container until a finger would land on it.
+      for (const place of coveredBy(el) ? [0.3, 0.7, 0.15, 0.85] : []) {
+        await reveal(el, place);
+        await pause(80);
+        r = el.getBoundingClientRect();
+        if (!coveredBy(el)) break;
+      }
+      const v = visible();
+      const x = r.left + r.width / 2 - v.left;
+      const y = r.top + r.height / 2 - v.top;
+      if (x < 0 || y < 0 || x > v.width || y > v.height) throw new Error(`${selector} is not on the screen at (${Math.round(x)}, ${Math.round(y)}) of ${Math.round(v.width)} by ${Math.round(v.height)}`);
+      return { x, y, dpr: devicePixelRatio, innerWidth: v.width, innerHeight: v.height, covered: coveredBy(el) };
     },
 
     /** Whether the element (or what it points at) has the focus. */

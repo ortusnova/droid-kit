@@ -10,19 +10,20 @@ export function javaHash(s) {
 /** The notification id the reminders plugin gives a reminder. @param {string} reminderId */
 export const notificationId = reminderId => javaHash(`dk-reminder:${reminderId}`);
 
-const PLAIN = /^[A-Za-z0-9 .,:;@_/+=\-]*$/;
+const PLAIN = /^[\x20-\x26\x28-\x7e]*$/;
 
 /**
  * The argument for `adb shell input text`, which takes `%s` for a space and stops at most shell characters.
- * Only plain text is supported: letters, digits, space and `. , : ; @ _ / + = -`. Anything else throws,
+ * Printable ASCII is supported, except the apostrophe (the argument is quoted with it) and the percent sign (`%s` is a space). Anything else throws,
  * so a scenario never types something other than what it meant to.
  * @param {string} text
  */
 export function inputText(text) {
   if (!PLAIN.test(text)) {
     const bad = [...text].find(c => !PLAIN.test(c));
-    throw new Error(`the Android driver types plain text only (letters, digits, space and . , : ; @ _ / + = -); it cannot type ${JSON.stringify(bad)}`);
+    throw new Error(`the Android driver types printable ASCII without the apostrophe; it cannot type ${JSON.stringify(bad)}`);
   }
+  if (text.includes('%')) throw new Error('the Android driver cannot type "%" (`input text` reads %s as a space)');
   return text.replace(/ /g, '%s');
 }
 

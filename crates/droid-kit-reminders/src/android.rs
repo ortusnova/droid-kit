@@ -55,6 +55,11 @@ pub fn cancel<R: Runtime>(app: &AppHandle<R>, reminder_id: &str) -> Result<(), R
     kotlin(app)?.0.run_mobile_plugin::<()>("cancel", CancelArgs { id: reminder_id }).map_err(ReminderError::platform)
 }
 
+/// Opens the app's notification settings (Kotlin `openSettings`).
+pub fn open_settings<R: Runtime>(app: &AppHandle<R>) -> Result<(), ReminderError> {
+    kotlin(app)?.0.run_mobile_plugin::<()>("openSettings", ()).map_err(ReminderError::platform)
+}
+
 pub fn changed<R: Runtime>(_app: &AppHandle<R>) -> Result<(), ReminderError> {
     Ok(())
 }

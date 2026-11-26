@@ -61,6 +61,7 @@ the kit by tag; run that one from such an app.
 | `dk run android-phone` | Builds on the Android build host, installs on the phone over wireless debugging, and launches it. |
 | `dk run android-emulator` | Builds for x86_64 and runs it on the build host's emulator. |
 | `dk run ios-phone` | Builds on this Linux machine with xtool, signs with your Apple ID, installs on the iPhone on USB, and launches it. |
+| `dk test linux-desktop` | Builds and starts the app as `dk run` does, then runs its device scenarios (`tests/device/`) on it. See [Device scenarios](#device-scenarios-dk-test). |
 | `dk new life-droid --id com.ortusnova.lifedroid` | Makes an app from `template/`, pinned to the kit tag of this `dk`. |
 | `dk check` | Checks that every kit dependency names the same tag. |
 | `dk kit local ../droid-kit` | Uses a local kit checkout instead of the pinned tag. |
@@ -163,6 +164,117 @@ createRouter({ routeTree, defaultErrorComponent: RouteError })   // from @droid-
 
 `reportError(message)` from `@droid-kit/platform` does the same for an error
 the app catches itself.
+
+## Device scenarios: `dk test`
+
+`dk test <target>` runs an app's scenarios on a running app, the same files on
+every target:
+
+```sh
+dk test linux-desktop                    # build and start the app, then run tests/device/
+dk test android-phone --only "Week"      # only scenarios whose name contains "Week"
+dk test android-phone --no-build         # use the app already running; build, install and start nothing
+```
+
+The targets are those of `dk run`: `android-phone`, `android-emulator`,
+`linux-desktop` and `ios-phone`. A target without a driver says so and exits 2. An app needs `@droid-kit/devtest` in its
+devDependencies, at the same tag as the other kit packages (`dk check` looks at
+it). Results go to `artifacts/devtest/<target>-<timestamp>/`: `RESULTS.md` (a
+table of scenarios, then each one's steps, notes, and how input reached the
+app) and the screenshots it links to. A failed step has a screenshot of its
+own. The log lines, `PASS`, `FAIL` or `SKIP` for each scenario and the path of
+`RESULTS.md`, are also printed.
+
+### A scenario
+
+Every `.ts`, `.js` or `.mjs` file in `tests/device/` is loaded, in name order.
+It default-exports a scenario or an array of them, and a file that exports none
+(shared helpers) is fine. Node runs the files itself, stripping types: import
+helpers with their `.ts` extension and use no enums. Scenarios run one after
+another against the same running app, so each one starts from a state it sets
+up itself.
+
+<!-- scenario-example -->
+```ts
+// The example in the README's "Device scenarios" section. packages/devtest/test/readme.test.ts keeps the two the same.
+import { scenario } from '@droid-kit/devtest';
+
+export default scenario('the floating action button counts presses', async t => {
+  const { d } = t;
+
+  await t.step('open the page', async () => {
+    await d.open('/components/fab');
+    await d.waitFor(`document.querySelector('#fab-presses') !== null`);
+  });
+
+  await t.step('press the button twice', async () => {
+    await d.tap('button[aria-label="New habit"]');
+    await d.tap('button[aria-label="New habit"]');
+    await d.waitFor(`document.querySelector('#fab-presses').textContent === 'Pressed 2 times'`);
+    t.expect('counter', await d.eval(`document.querySelector('#fab-presses').textContent`), 'Pressed 2 times');
+    await d.screenshot('fab-pressed-twice');
+  });
+
+  // Leaving the page unmounts it, so the next scenario to open it finds its counter at 0.
+  await t.step('leave the page', () => d.open('/'));
+
+  t.note('the page has a light and a dark sample; a tap goes to the first button it finds');
+});
+```
+
+- `scenario(name, run)` declares one. `scenario(name, { needs: ['notifications'] }, run)`
+  names what the driver must be able to do; on a driver that cannot, the
+  scenario is skipped and `RESULTS.md` says why.
+- `t.step(name, run)` is a named step. Its time goes into the results, and the
+  first step that throws fails the scenario, with a screenshot taken at that
+  moment; later steps do not run.
+- `t.expect(name, actual, expected)` fails the step unless the two are equal
+  (JSON equality). `t.note(text)` adds a line to the results.
+- `t.d` is the driver. Selectors are CSS selectors in the app's page. Prefer
+  `data-*` attributes to text, which changes with the language.
+
+### The driver
+
+| Method | |
+| --- | --- |
+| `open(route)` | Goes to a route, e.g. `/week?sheet=new-habit`. |
+| `tap(selector)` | Taps the middle of the first element that matches. It fails if something covers that point. |
+| `type(selector, text)` | Taps the element, then types; the text is appended. |
+| `swipe(selector, direction)` | Swipes from the element: `up`, `down`, `left` or `right`. |
+| `back()` | The system back on Android; on Linux and iOS, the app's own back. |
+| `eval(expression)` | Evaluates a JavaScript expression in the page; the result must be JSON. |
+| `waitFor(expression, { timeoutMs })` | Waits until the expression is true in the page (10 s by default). Use it for anything that animates. |
+| `screenshot(name)` | Saves a picture of the app only, never other windows. |
+| `forceStop()`, `restart()` | Stops the app's process; starts it again and waits for its first screen. |
+| `reinstall()` | Installs a new build over the running one, keeping its data. Needs `reinstall`. |
+| `waitForNotification({ id, title })`, `tapNotification(...)` | Wait for a system notification, tap it. Need `notifications`. |
+| `setClock(epochMs)`, `setZone(zone)` | Set the device's clock and time zone; `close()` puts them back. Need `clock`. |
+
+The capabilities of each driver, and how its input reaches the app:
+
+| Target | Input | `realInput` | `notifications` | `reinstall` | `clock` |
+| --- | --- | --- | --- | --- | --- |
+| `android-phone` | Real touch, through `adb shell input` | yes | yes | yes | no |
+| `android-emulator` | The same | yes | yes | yes | yes |
+| `linux-desktop` | Inside the page: DOM events at the element's position, not pointer input | no | yes | yes | no |
+| `ios-phone` | Inside the page, through Web Inspector: DOM pointer events, not real touch | no | no | yes | no |
+
+A passing run on `linux-desktop` or `ios-phone` shows that the app's logic and screens work,
+not that a finger lands where it should; the Android run is the one that does.
+`RESULTS.md` records which kind of input a run had.
+
+The Android driver reads and drives the page through the WebView's DevTools
+socket. The Linux driver uses the **evaluation channel**: a Unix socket at
+`$XDG_RUNTIME_DIR/droid-kit/<identifier>/eval.sock` that the platform plugin
+opens, in debug builds on Linux only, when `dk run linux-desktop` sets
+`DK_EVAL_SOCKET`. It runs JavaScript in the page and writes a screenshot of the
+web view. A release build does not contain it. Nothing is registered on the
+session bus, and the socket is mode 0600.
+
+Exit codes of `dk test`: 0 when every scenario passed or was skipped, 1 when
+one failed (or the app reported an error while starting), and 2 when the run
+could not start: no driver for the target, no `@droid-kit/devtest`, no
+scenarios in `tests/device/`, or no first screen within the timeout.
 
 ## In an app
 

@@ -31,7 +31,7 @@ const sleep = (/** @type {number} */ ms) => new Promise(resolve => setTimeout(re
  * Installed in the page once (`window.__dkTest`). Plain JavaScript: it is sent as text.
  * Every function throws a message that names the selector, so a failing step says what it could not find.
  */
-function pageHelpers() {
+export function pageHelpers() {
   // A synthetic pointer is not one the browser knows, so `setPointerCapture(id)` throws for it, and a handler that
   // captures the pointer (a dial, a slider) would stop before it did anything. Ours have ids from 9000 up; for those
   // capture is a no-op. A real pointer's capture is left alone.
@@ -272,7 +272,7 @@ function pageHelpers() {
 }
 
 /** The expression that calls a helper, installing the helpers first if the page is new. */
-const helper = (/** @type {string} */ name, /** @type {unknown[]} */ args) => `(window.__dkTest ??= (${pageHelpers.toString()})()).${name}(...${JSON.stringify(args)})`;
+export const helper = (/** @type {string} */ name, /** @type {unknown[]} */ args) => `(window.__dkTest ??= (${pageHelpers.toString()})()).${name}(...${JSON.stringify(args)})`;
 
 // ---- the channel ---------------------------------------------------------------------------
 

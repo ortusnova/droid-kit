@@ -129,7 +129,7 @@ export interface RunInfo {
  * `src/drivers/<platform>.js`: `android.js` for both Android targets, `linux.js`.
  */
 export interface TestContext {
-  target: 'android-phone' | 'android-emulator' | 'linux-desktop' | 'ios';
+  target: 'android-phone' | 'android-emulator' | 'linux-desktop' | 'ios-phone';
   /** The app's directory. */
   appDir: string;
   /** The application identifier, e.g. com.ortusnova.lifedroid. */

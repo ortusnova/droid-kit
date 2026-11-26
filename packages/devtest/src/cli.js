@@ -9,7 +9,7 @@ import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resultsMarkdown, runScenarios } from './index.js';
 
-const DRIVER_OF = { 'android-phone': 'android', 'android-emulator': 'android', 'linux-desktop': 'linux', ios: 'ios' };
+const DRIVER_OF = { 'android-phone': 'android', 'android-emulator': 'android', 'linux-desktop': 'linux', 'ios-phone': 'ios' };
 
 async function main() {
   const raw = process.env.DK_TEST_CONTEXT;

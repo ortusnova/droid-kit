@@ -127,7 +127,7 @@ On `ios-phone` (no Mac, no Xcode install, no paid developer account):
 - Once per iPhone: plug it in and trust the computer, install any app once,
   then Settings → General → VPN & Device Management → your Apple ID → Trust,
   and Settings → Privacy & Security → Developer Mode (the phone restarts). For
-  `scripts/iphone.sh` and `app-check --ios`, also Settings → Apps → Safari →
+  `scripts/iphone.sh` and `dk test ios-phone`, also Settings → Apps → Safari →
   Advanced → Web Inspector.
 - `scripts/ios-build.sh` (which `dk` embeds) cross-compiles the app's Rust
   library with clang and that SDK, copies Tauri's Swift runtime and every
@@ -142,6 +142,14 @@ On `ios-phone` (no Mac, no Xcode install, no paid developer account):
   `js` and `tap` through Web Inspector (`cdp` starts the bridge). The app must
   be in front: iOS does not let Web Inspector reach a suspended app.
 - `KIT_LOCAL=<kit checkout>` builds against a local kit without `dk kit local`.
+- `dk test ios-phone` runs the app's scenarios (`tests/device/`) on the iPhone
+  through `pymobiledevice3 webinspector cdp`. **Input is inside the page** (the
+  same pointer, mouse and click events the Linux driver sends), **not real
+  touch**: iOS has no touch injection without Xcode, and `RESULTS.md` says so.
+  The app must be in front and the iPhone unlocked; the driver brings it back
+  before each scenario. The driver has no `notifications` capability (tapping a
+  banner needs a finger), so a scenario that needs it is skipped, and the skip
+  is reported. `--no-build` runs against the app already installed.
 
 ### Errors the kit reports
 

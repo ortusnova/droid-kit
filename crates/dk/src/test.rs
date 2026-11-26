@@ -15,7 +15,7 @@ pub enum TestTarget {
     AndroidPhone,
     AndroidEmulator,
     LinuxDesktop,
-    Ios,
+    IosPhone,
 }
 
 impl TestTarget {
@@ -24,7 +24,7 @@ impl TestTarget {
             TestTarget::AndroidPhone => "android-phone",
             TestTarget::AndroidEmulator => "android-emulator",
             TestTarget::LinuxDesktop => "linux-desktop",
-            TestTarget::Ios => "ios",
+            TestTarget::IosPhone => "ios-phone",
         }
     }
 }
@@ -63,10 +63,6 @@ pub fn context(app: &App, target: TestTarget, run_dir: &Path, dk: &Path) -> serd
 }
 
 pub fn run(app_dir: &Path, target: TestTarget, only: Option<&str>, build: bool) -> Result<ExitCode> {
-    if target == TestTarget::Ios {
-        eprintln!("dk test: ios has no driver yet (the driver interface is in @droid-kit/devtest; see the README)");
-        return Ok(ExitCode::from(2));
-    }
     let app = App::load(app_dir)?;
     let cli = runner(&app.dir)?;
     if build {
@@ -74,7 +70,7 @@ pub fn run(app_dir: &Path, target: TestTarget, only: Option<&str>, build: bool) 
             TestTarget::AndroidPhone => crate::android::run_phone(&app, 90)?,
             TestTarget::AndroidEmulator => crate::android::run_emulator(&app)?,
             TestTarget::LinuxDesktop => crate::linux::run_desktop(&app, 90, None, true)?,
-            TestTarget::Ios => unreachable!(),
+            TestTarget::IosPhone => crate::ios::run_phone(&app, 90)?,
         };
         if started != ExitCode::SUCCESS {
             eprintln!("dk test: the app did not start, so no scenarios ran");
@@ -103,16 +99,16 @@ mod tests {
 
     #[test]
     fn target_names_match_dk_run_and_the_runner() {
-        let names: Vec<_> = [TestTarget::AndroidPhone, TestTarget::AndroidEmulator, TestTarget::LinuxDesktop, TestTarget::Ios].iter().map(|t| t.name()).collect();
-        assert_eq!(names, ["android-phone", "android-emulator", "linux-desktop", "ios"]);
+        let names: Vec<_> = [TestTarget::AndroidPhone, TestTarget::AndroidEmulator, TestTarget::LinuxDesktop, TestTarget::IosPhone].iter().map(|t| t.name()).collect();
+        assert_eq!(names, ["android-phone", "android-emulator", "linux-desktop", "ios-phone"]);
     }
 
     #[test]
-    fn ios_is_refused_before_anything_is_built() {
-        // An empty directory: no app, no runner. iOS must fail on its own terms first.
-        let dir = tempfile::tempdir().unwrap();
-        let code = run(dir.path(), TestTarget::Ios, None, true).unwrap();
-        assert_eq!(code, ExitCode::from(2));
+    fn the_iphone_is_ios_phone_as_in_dk_run() {
+        use clap::ValueEnum;
+        assert_eq!(TestTarget::from_str("ios-phone", false), Ok(TestTarget::IosPhone));
+        // The name `dk run` uses, not the platform's.
+        assert!(TestTarget::from_str("ios", false).is_err());
     }
 
     #[test]

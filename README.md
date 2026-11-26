@@ -333,6 +333,27 @@ image = "localhost/droid-kit-linux:latest"  # built from containers/linux-build 
   week. Debug builds only.
 - iPhone: native prompts (the notification permission) need a person to tap
   them, and the page's presses from scripts are DOM activations, not touches.
+- iPhone, reminders:
+  - iOS keeps at most 64 pending notifications per app. A monthly reminder on
+    the 29th to 31st holds 12 of them and a yearly one on 29 February holds 4
+    (the other rules hold one per weekday, or one); `schedule` refuses, saying
+    so, when all reminders together would pass 64.
+  - Those two rules cannot be repeating triggers ("the last day of the month",
+    "28 February in a year without the 29th"), so the plugin arms one-time
+    occurrences ahead, 12 months for the monthly one and 4 years for the yearly
+    one, and arms the next ones again **whenever the app starts or a reminder
+    is scheduled**. Someone who does not open the app for a year stops getting
+    the monthly reminders of those days, and after four years the yearly one.
+    iOS has no dependable way to run in the background to do it sooner (background
+    refresh is not reliable); that is left for later.
+  - The rules to arm again are read from `reminders.json`, the list the Rust
+    side writes (the same file Android's boot receiver and Linux's reminderd
+    read). The iPhone keeps only its own delivery state in the app's defaults:
+    which reminders it armed with one-time triggers, and up to when. If the file
+    is missing or unreadable, nothing is armed again and nothing is removed.
+  - Times follow the phone's time zone: a 07:00 reminder is at 07:00 wherever the
+    phone is. The month and day of a repeating monthly or yearly trigger are read
+    in the calendar the phone is set to; a non-Gregorian calendar is not tried.
 
 ## Storage
 

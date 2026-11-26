@@ -46,7 +46,7 @@ Install it from a checkout of the kit, or straight from a tag:
 
 ```sh
 cargo install --path crates/dk --locked
-cargo install --git https://github.com/ortusnova/droid-kit --tag v0.2.0-rc.1 dk --locked
+cargo install --git https://github.com/ortusnova/droid-kit --tag v0.2.0-rc.2 dk --locked
 ```
 
 Run it in an app's directory (the one with `package.json` and `src-tauri/`),

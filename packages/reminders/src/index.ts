@@ -3,7 +3,7 @@
 import { addPluginListener } from '@tauri-apps/api/core';
 import { commands, events, type Capabilities, type Reminder, type ReminderError, type Repeat } from './bindings';
 
-export const VERSION = '0.2.0-rc.1';
+export const VERSION = '0.2.0-rc.2';
 export type { Capabilities, Reminder, ReminderError, Repeat };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: ReminderError };

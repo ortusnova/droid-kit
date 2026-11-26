@@ -1,10 +1,24 @@
 [package]
 name = "droid-kit-reminders"
-description = "Tauri plugin: reminders that fire while the app is closed"
+description = "Tauri plugin: reminders that fire at a set local time, even while the app is closed"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+links = "droid-kit-reminders"
 
 [dependencies]
+tauri = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "=2.0.21"
+specta = { version = "=2.0.0-rc.28", features = ["derive"] }
+tauri-specta = { version = "=2.0.0-rc.29", features = ["derive", "typescript"] }
+specta-typescript = "=0.0.15"
+
+[target.'cfg(target_os = "android")'.dependencies]
+tauri-plugin-notification = "=2.8.1"
+
+[build-dependencies]
+tauri-plugin = { workspace = true }

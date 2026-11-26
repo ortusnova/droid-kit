@@ -40,7 +40,11 @@ pub fn build(app: &App, arch: &str) -> Result<PathBuf> {
     let remote_app = Path::new(&remote_root).join(app.rel_dir());
 
     let mut rsync = Command::new("rsync");
-    rsync.args(["-a", "--delete"]);
+    // Each directory's .gitignore also applies: Tauri writes gitignored files
+    // into gen/android during the build (the Gradle list of plugin libraries,
+    // generated Kotlin), and a stale local copy must never replace the build
+    // host's current one. Excluded files are also kept on the host by --delete.
+    rsync.args(["-a", "--delete", "--filter=:- .gitignore"]);
     for e in EXCLUDES {
         rsync.arg(format!("--exclude={e}"));
     }
@@ -53,6 +57,13 @@ pub fn build(app: &App, arch: &str) -> Result<PathBuf> {
         "cd {} && {}/bin/shell pnpm install --config.confirmModulesPurge=false",
         remote_app.display(),
         a.host_root
+    )))?;
+    // Tauri's build script writes the Gradle list of plugin libraries only
+    // when it runs, and it reruns when these files change. Removing them makes
+    // every build list the plugins the app has now.
+    run(Command::new("ssh").arg(&a.host).arg(format!(
+        "cd {}/src-tauri/gen/android 2>/dev/null && rm -f tauri.settings.gradle app/tauri.build.gradle.kts; true",
+        remote_app.display()
     )))?;
     let project = Path::new(&app.root_name()).join(app.rel_dir());
     run(Command::new("ssh").arg(&a.host).arg(format!("{}/bin/build-apk {} {arch}", a.host_root, project.display())))?;
@@ -181,7 +192,11 @@ pub fn report(outcome: Outcome, timeout: u64, shot: &Path, log: &Path) -> Result
 /// The emulator on the build host, through its own scripts.
 pub fn run_emulator(app: &App) -> Result<ExitCode> {
     let a = &app.android;
-    run(Command::new("ssh").arg(&a.host).arg(format!("{}/bin/emulator-start", a.host_root)))?;
+    // Start the emulator unless it is already running.
+    run(Command::new("ssh").arg(&a.host).arg(format!(
+        "cd {0} && (bin/apodman container inspect -f '{{{{.State.Running}}}}' android-dev-emulator 2>/dev/null | grep -q true || bin/emulator-start)",
+        a.host_root
+    )))?;
     let apk = build(app, "x86_64")?;
     let remote_apk = format!(
         "{}/work/{}/apk/{}",

@@ -9,5 +9,11 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p ."
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": "^2.12.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "2.12.5"
   }
 }

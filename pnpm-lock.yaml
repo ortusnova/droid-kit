@@ -194,6 +194,9 @@ importers:
       '@droid-kit/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@droid-kit/reminders':
+        specifier: workspace:*
+        version: link:../../packages/reminders
       '@droid-kit/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -268,7 +271,11 @@ importers:
         specifier: 5.1.2
         version: 5.1.2(@types/node@26.6.10)(vite@8.3.8(@types/node@26.6.10)(jiti@2.7.0))
 
-  packages/reminders: {}
+  packages/reminders:
+    devDependencies:
+      '@tauri-apps/api':
+        specifier: 2.12.5
+        version: 2.12.5
 
   packages/tokens:
     devDependencies:

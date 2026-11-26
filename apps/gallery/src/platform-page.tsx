@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { dk, onThemeChange, setThemePreference, type ThemePreference } from '@droid-kit/platform';
+import { RemindersSection } from './reminders-section';
 
 declare global {
   interface Window {
@@ -55,7 +56,7 @@ export function PlatformPage() {
   return (
     <div style={{ padding: 24 }}>
       <div id="inset-probe" style={{ position: 'fixed', visibility: 'hidden', padding: 'var(--dk-inset-top) var(--dk-inset-right) var(--dk-inset-bottom) var(--dk-inset-left)' }} />
-      <h1>droid-kit gallery</h1>
+      <RemindersSection />
       <h2>Theme</h2>
       <div>
         <button style={button} onClick={theme('system')}>System</button>

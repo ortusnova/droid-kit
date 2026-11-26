@@ -14,7 +14,9 @@ fn save_token_choices(app: tauri::AppHandle, json: String) -> Result<String, Str
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(droid_kit_platform::init())
+        .plugin(droid_kit_reminders::init())
         .invoke_handler(tauri::generate_handler![save_token_choices])
         .run(tauri::generate_context!())
         .expect("error while running the gallery");

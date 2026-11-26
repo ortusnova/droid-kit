@@ -6,6 +6,7 @@
 #   js 'document.title'       evaluate in the app's web view and print the result
 #   key BACK                  press a key (KEYCODE_ prefix added)
 #   shot <file.png>           screenshot
+#   awake                     wake the phone, lift the keyguard, close the shade
 #
 # Taps go through `adb shell input`, so the page sees real touch events.
 # Element positions come from the web view's DevTools socket.
@@ -17,6 +18,15 @@ DK_PORT=${DK_PORT:-9350}
 DK_EVAL=$(dirname "${BASH_SOURCE[0]}")/cdp-eval.mjs
 
 adb_() { "$DK_ADB" -s "$DK_SERIAL" "$@"; }
+
+# Taps go wherever the screen shows: wake the phone, lift the keyguard (no
+# PIN), and close the notification shade before testing.
+awake() {
+  adb_ shell input keyevent KEYCODE_WAKEUP
+  adb_ shell wm dismiss-keyguard
+  adb_ shell cmd statusbar collapse
+  sleep 1
+}
 
 _forward() {
   local pid

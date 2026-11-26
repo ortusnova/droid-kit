@@ -20,3 +20,5 @@ tauri = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 droid-kit-platform = { path = "../../../crates/droid-kit-platform" }
+droid-kit-reminders = { path = "../../../crates/droid-kit-reminders" }
+tauri-plugin-notification = "=2.8.1"

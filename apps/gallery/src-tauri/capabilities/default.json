@@ -7,6 +7,8 @@
   ],
   "permissions": [
     "core:default",
-    "droid-kit-platform:default"
+    "notification:default",
+    "droid-kit-platform:default",
+    "droid-kit-reminders:default"
   ]
 }

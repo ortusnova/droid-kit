@@ -91,11 +91,20 @@ pub fn local(app: &Path, kit: &Path) -> Result<ExitCode> {
 
 pub fn pin(app: &Path) -> Result<ExitCode> {
     let app = app.canonicalize()?;
-    let backup = backup_dir(&app);
-    if !backup.exists() {
+    if !backup_dir(&app).exists() {
         eprintln!("already on the pinned tag");
         return Ok(ExitCode::SUCCESS);
     }
+    restore_files(&app)?;
+    run(Command::new("pnpm").arg("install").current_dir(&app))?;
+    eprintln!("back on the pinned kit tag");
+    Ok(ExitCode::SUCCESS)
+}
+
+/// Puts back every file `local` saved, deletes the ones that did not exist
+/// before, and removes the directories `local` made once they are empty.
+fn restore_files(app: &Path) -> Result<()> {
+    let backup = backup_dir(app);
     let absent = fs::read_to_string(backup.join("ABSENT"))?;
     for rel in TOUCHED {
         let dst = app.join(rel);
@@ -107,13 +116,65 @@ pub fn pin(app: &Path) -> Result<ExitCode> {
             fs::copy(backup.join(rel), &dst)?;
         }
     }
-    let cargo_dir = app.join(".cargo");
-    if cargo_dir.is_dir() && fs::read_dir(&cargo_dir)?.next().is_none() {
-        fs::remove_dir(&cargo_dir)?;
-    }
     fs::remove_dir_all(&backup)?;
     fs::remove_file(app.join(".dk/kit-local"))?;
-    run(Command::new("pnpm").arg("install").current_dir(&app))?;
-    eprintln!("back on the pinned kit tag");
-    Ok(ExitCode::SUCCESS)
+    // `.dk/` may hold other things, so only an empty one goes.
+    for dir in [".cargo", ".dk"] {
+        let dir = app.join(dir);
+        if dir.is_dir() && fs::read_dir(&dir)?.next().is_none() {
+            fs::remove_dir(&dir)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Lays out what `local` leaves behind, for an app that had these files before it.
+    fn app_in_local_mode(root: &Path, had_cargo_config: bool) {
+        let backup = backup_dir(root);
+        fs::create_dir_all(backup.join("src-tauri")).unwrap();
+        fs::write(root.join("pnpm-workspace.yaml"), "packages: []\noverrides:\n").unwrap();
+        fs::write(backup.join("pnpm-workspace.yaml"), "packages: []\n").unwrap();
+        fs::write(root.join("pnpm-lock.yaml"), "changed").unwrap();
+        fs::write(backup.join("pnpm-lock.yaml"), "lock").unwrap();
+        fs::write(root.join("src-tauri/Cargo.lock"), "changed").unwrap();
+        fs::write(backup.join("src-tauri/Cargo.lock"), "cargo lock").unwrap();
+        let mut absent = String::from("Cargo.lock\n");
+        if !had_cargo_config {
+            absent.push_str(".cargo/config.toml\n");
+        }
+        fs::write(backup.join("ABSENT"), absent).unwrap();
+        fs::create_dir_all(root.join(".cargo")).unwrap();
+        fs::write(root.join(".cargo/config.toml"), "[patch]").unwrap();
+        fs::write(root.join(".dk/kit-local"), "/kit").unwrap();
+    }
+
+    #[test]
+    fn pin_restores_files_and_leaves_no_directories_behind() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("src-tauri")).unwrap();
+        fs::create_dir_all(dir.path().join(".dk")).unwrap();
+        app_in_local_mode(dir.path(), false);
+        restore_files(dir.path()).unwrap();
+        assert_eq!(fs::read_to_string(dir.path().join("pnpm-workspace.yaml")).unwrap(), "packages: []\n");
+        assert_eq!(fs::read_to_string(dir.path().join("pnpm-lock.yaml")).unwrap(), "lock");
+        assert_eq!(fs::read_to_string(dir.path().join("src-tauri/Cargo.lock")).unwrap(), "cargo lock");
+        assert!(!dir.path().join(".cargo").exists(), ".cargo/ is gone");
+        assert!(!dir.path().join(".dk").exists(), ".dk/ is gone, not left empty");
+    }
+
+    #[test]
+    fn pin_keeps_a_dk_directory_that_holds_something_else() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir_all(dir.path().join("src-tauri")).unwrap();
+        fs::create_dir_all(dir.path().join(".dk")).unwrap();
+        fs::write(dir.path().join(".dk/other"), "x").unwrap();
+        app_in_local_mode(dir.path(), false);
+        restore_files(dir.path()).unwrap();
+        assert!(dir.path().join(".dk/other").exists());
+        assert!(!dir.path().join(".dk/kit-local").exists());
+    }
 }

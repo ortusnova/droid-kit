@@ -476,6 +476,33 @@
           }
         }
       }
+    },
+    "scrim": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [
+          0,
+          0,
+          0
+        ],
+        "alpha": 0.4,
+        "hex": "#000000"
+      },
+      "$description": "Backdrop behind sheets and dialogs. Translucent; not part of the contrast pairs.",
+      "$extensions": {
+        "com.ortusnova.droidkit": {
+          "dark": {
+            "colorSpace": "srgb",
+            "components": [
+              0,
+              0,
+              0
+            ],
+            "alpha": 0.6,
+            "hex": "#000000"
+          }
+        }
+      }
     }
   }
 }

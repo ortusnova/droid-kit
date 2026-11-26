@@ -13,9 +13,12 @@
     "@droid-kit/platform": "workspace:*",
     "@droid-kit/tokens": "workspace:*",
     "@droid-kit/ui": "workspace:*",
+    "@internationalized/date": "3.12.4",
     "@tanstack/react-router": "1.170.46",
     "@tauri-apps/api": "2.12.5",
+    "lucide-react": "1.80.0",
     "react": "19.3.1",
+    "react-aria-components": "1.22.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {

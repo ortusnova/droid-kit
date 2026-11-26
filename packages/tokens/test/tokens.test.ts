@@ -70,7 +70,7 @@ describe('generated outputs', () => {
   it('define every role in light and dark', () => {
     const t = resolve();
     expect(Object.keys(t.colors.dark).sort()).toEqual(Object.keys(t.colors.light).sort());
-    expect(Object.keys(t.colors.light)).toHaveLength(19);
+    expect(Object.keys(t.colors.light)).toHaveLength(20);
   });
 });
 
@@ -84,6 +84,12 @@ describe('contrast', () => {
     t.colors.light['text-muted'] = '#a1a1aa';
     const problems = contrastProblems(t);
     expect(problems.some(p => p.startsWith('light: text-muted on'))).toBe(true);
+  });
+
+  it('writes translucent colours as #rrggbbaa for CSS and #aarrggbb for Android', () => {
+    const t = resolve();
+    expect(t.colors.light.scrim).toBe('#00000066');
+    expect(outputs(t).get('packages/tokens/generated/android/values/colors.xml')).toContain('<color name="dk_scrim">#66000000</color>');
   });
 
   it('computes WCAG ratios', () => {

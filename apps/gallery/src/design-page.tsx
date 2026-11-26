@@ -104,13 +104,13 @@ function OptionCard({ decision, option, selected, onSelect }: { decision: Decisi
       data-option={`${decision.id}/${option.id}`}
       className={`rounded-box border-2 p-2 ${selected ? 'border-primary' : 'border-transparent'}`}
     >
-      <button className="btn btn-block justify-between" onClick={onSelect} aria-pressed={selected}>
+      <button className="btn btn-block min-h-touch justify-between" onClick={onSelect} aria-pressed={selected}>
         <span>{option.label}</span>
         <span className={selected ? 'badge badge-primary' : 'badge badge-ghost'}>{selected ? 'Chosen' : 'Choose'}</span>
       </button>
       <div className={`mt-2 grid gap-2 ${modes.length === 2 ? 'grid-cols-2' : ''}`}>
         {modes.map(mode => (
-          <div key={mode} data-theme={mode} className="bg-background text-base-content rounded-box p-2" style={previewStyle(option, mode)}>
+          <div key={mode} data-theme={mode} inert className="bg-background text-base-content rounded-box p-2" style={previewStyle(option, mode)}>
             <div className="text-caption text-muted mb-1">{mode === 'light' ? 'Light' : 'Dark'}</div>
             <div style={{ zoom: modes.length === 2 ? 0.62 : 1 }}>
               <Sample motionKey={play} />

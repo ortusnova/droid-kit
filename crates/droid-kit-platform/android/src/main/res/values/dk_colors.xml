@@ -20,4 +20,5 @@
     <color name="dk_on_warning">#09090b</color>
     <color name="dk_danger">#e7000b</color>
     <color name="dk_on_danger">#ffffff</color>
+    <color name="dk_scrim">#66000000</color>
 </resources>

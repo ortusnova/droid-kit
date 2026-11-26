@@ -26,3 +26,70 @@
     font-family: var(--font-sans);
   }
 }
+
+/* React Aria's Sheet. Its scroll-snap and swipe mechanics are inline styles;
+   this is its look. */
+.dk-sheet-overlay {
+  /* Above the app bar, tab bar and floating action button. */
+  z-index: 1000;
+}
+.dk-sheet-backdrop[data-stack-index="0"] {
+  background: var(--color-scrim);
+}
+@keyframes dk-sheet-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.dk-sheet {
+  /* overscrollPadding adds a viewport of padding below the sheet. Tailwind's
+     border-box would count it inside max-height and squash the sheet to nothing. */
+  box-sizing: content-box;
+  background-color: var(--color-raised);
+  color: var(--color-base-content);
+  width: 100%;
+  height: auto;
+  max-height: calc(100% - 2rem - var(--dk-inset-top));
+  border-start-start-radius: var(--radius-box);
+  border-start-end-radius: var(--radius-box);
+  box-shadow: 0 -8px 24px var(--color-scrim);
+  overflow: clip;
+  z-index: 1;
+}
+.dk-sheet-handle {
+  position: absolute;
+  z-index: 2;
+  top: 0.5rem;
+  left: 50%;
+  translate: -50% 0;
+  width: 2.5rem;
+  height: 0.3rem;
+  border-radius: 1rem;
+  background-color: var(--color-divider);
+}
+.dk-sheet-content {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 1.5rem 1.25rem calc(1rem + var(--dk-inset-bottom) + var(--sheet-scroll-padding-y, 0px));
+  outline: none;
+  overflow: hidden;
+  overscroll-behavior: auto;
+  scrollbar-width: none;
+}
+.dk-sheet-overlay[data-expanded] .dk-sheet-content {
+  overflow: auto;
+}
+
+/* Segments of React Aria's date and time fields. */
+.dk-segment {
+  border-radius: 0.25rem;
+  padding-inline: 0.0625rem;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  &[data-placeholder] {
+    color: var(--color-muted);
+  }
+  &[data-focused] {
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
+  }
+}

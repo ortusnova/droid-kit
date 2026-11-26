@@ -30,6 +30,10 @@ js() { _forward && node "$DK_EVAL" "$DK_PORT" "$1"; }
 # the web view's offset on screen (0 in Tauri's edge-to-edge window).
 tap() {
   local xy
+  # Off-screen elements are scrolled into view first, except inside a sheet,
+  # where scrolling the page would read as a swipe to dismiss.
+  js "(() => { const e = document.querySelector('$1'); if (!e || e.closest('.dk-sheet')) return 0; const r = e.getBoundingClientRect(); if (r.top < 60 || r.bottom > innerHeight - 90) e.scrollIntoView({ block: 'center' }); return 1; })()" >/dev/null
+  sleep 0.4
   xy=$(js "(() => { const e = document.querySelector('$1'); if (!e) return 'missing'; const r = e.getBoundingClientRect(); return Math.round((r.x + r.width / 2) * devicePixelRatio) + ' ' + Math.round((r.y + r.height / 2) * devicePixelRatio); })()" | tr -d '"')
   if [[ $xy == missing ]]; then echo "tap: no element matches $1" >&2; return 1; fi
   adb_ shell input tap $xy

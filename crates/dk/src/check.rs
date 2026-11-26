@@ -65,14 +65,21 @@ pub fn tag_problems(deps: &[KitDep]) -> Vec<String> {
 
 /// The kit's own checks, when `dk check` runs in the kit's repository.
 fn kit_checks(root: &Path) -> Result<bool> {
-    eprintln!("kit: design tokens");
-    let status = std::process::Command::new("node")
-        .arg("packages/tokens/scripts/generate.ts")
-        .arg("--check")
-        .current_dir(root)
-        .status()
-        .context("running the token generator (is node on PATH?)")?;
-    Ok(status.success())
+    let mut ok = true;
+    for (what, script, args) in [
+        ("design tokens", "packages/tokens/scripts/generate.ts", &["--check"][..]),
+        ("colour literals in components", "scripts/check-colours.mjs", &[][..]),
+    ] {
+        eprintln!("kit: {what}");
+        let status = std::process::Command::new("node")
+            .arg(script)
+            .args(args)
+            .current_dir(root)
+            .status()
+            .with_context(|| format!("running {script} (is node on PATH?)"))?;
+        ok &= status.success();
+    }
+    Ok(ok)
 }
 
 pub fn kit_root(dir: &Path) -> Option<std::path::PathBuf> {

@@ -85,7 +85,7 @@ export function PlatformPage() {
           </div>
         ))}
       </dl>
-      <input id="kbd-probe" placeholder="Tap to open the keyboard" style={{ fontSize: 16, padding: 8, width: '100%', boxSizing: 'border-box' }} />
+      <input id="kbd-probe" placeholder="Tap to open the keyboard" style={{ fontSize: 16, padding: 8, width: '100%', boxSizing: 'border-box', minHeight: 44 }} />
     </div>
   );
 }

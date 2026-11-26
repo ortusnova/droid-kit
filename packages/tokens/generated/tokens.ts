@@ -21,7 +21,8 @@ export const tokens = {
       "warning": "#fe9a00",
       "on-warning": "#09090b",
       "danger": "#e7000b",
-      "on-danger": "#ffffff"
+      "on-danger": "#ffffff",
+      "scrim": "#00000066"
     },
     "dark": {
       "background": "#09090b",
@@ -42,7 +43,8 @@ export const tokens = {
       "warning": "#ffb900",
       "on-warning": "#09090b",
       "danger": "#fb2c36",
-      "on-danger": "#09090b"
+      "on-danger": "#09090b",
+      "scrim": "#00000099"
     }
   },
   "radius": {

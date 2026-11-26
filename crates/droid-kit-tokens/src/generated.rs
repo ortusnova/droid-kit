@@ -21,6 +21,7 @@ pub mod light {
     pub const ON_WARNING: &str = "#09090b";
     pub const DANGER: &str = "#e7000b";
     pub const ON_DANGER: &str = "#ffffff";
+    pub const SCRIM: &str = "#00000066";
 }
 
 /// Dark mode colours, `#rrggbb`.
@@ -44,6 +45,7 @@ pub mod dark {
     pub const ON_WARNING: &str = "#09090b";
     pub const DANGER: &str = "#fb2c36";
     pub const ON_DANGER: &str = "#09090b";
+    pub const SCRIM: &str = "#00000099";
 }
 
 /// Minimum touch target, CSS pixels.

@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest';
+import { CalendarDate, Time } from '@internationalized/date';
+import {
+  cadenceOfKind,
+  from12Hour,
+  isoWeekday,
+  minuteChoices,
+  snapMinute,
+  to12Hour,
+  toggleWeekday,
+  uses12HourClock,
+  weekOf,
+  weekdayOrder,
+} from '../src/dates-logic';
+
+describe('week start follows the locale', () => {
+  it('en-US weeks start on Sunday', () => {
+    expect(weekdayOrder('en-US')).toEqual([7, 1, 2, 3, 4, 5, 6]);
+    expect(weekOf(new CalendarDate(2026, 11, 25), 'en-US')[0].toString()).toBe('2026-11-22');
+  });
+  it('en-GB weeks start on Monday', () => {
+    expect(weekdayOrder('en-GB')).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(weekOf(new CalendarDate(2026, 11, 25), 'en-GB')[0].toString()).toBe('2026-11-23');
+  });
+  it('ISO weekdays', () => {
+    expect(isoWeekday(new CalendarDate(2026, 11, 23))).toBe(1);
+    expect(isoWeekday(new CalendarDate(2026, 11, 29))).toBe(7);
+  });
+});
+
+describe('cadence', () => {
+  it('weekly on Monday and Thursday', () => {
+    let c = cadenceOfKind('weekly', undefined, 1);
+    expect(c).toEqual({ kind: 'weekly', weekdays: [1] });
+    c = toggleWeekday(c as { kind: 'weekly'; weekdays: (1 | 4)[] }, 4);
+    expect(c).toEqual({ kind: 'weekly', weekdays: [1, 4] });
+  });
+  it('keeps at least one weekday', () => {
+    expect(toggleWeekday({ kind: 'weekly', weekdays: [3] }, 3)).toEqual({ kind: 'weekly', weekdays: [3] });
+  });
+  it('keeps the weekdays when switching away and back', () => {
+    const weekly = { kind: 'weekly' as const, weekdays: [2, 5] as (2 | 5)[] };
+    expect(cadenceOfKind('daily', weekly)).toEqual({ kind: 'daily' });
+    expect(cadenceOfKind('weekly', weekly)).toEqual(weekly);
+  });
+});
+
+describe('time', () => {
+  it('12-hour clock by locale', () => {
+    expect(uses12HourClock('en-US')).toBe(true);
+    expect(uses12HourClock('en-GB')).toBe(false);
+    expect(uses12HourClock('de-DE')).toBe(false);
+  });
+  it('converts between 12 and 24 hours', () => {
+    expect(to12Hour(new Time(6, 45))).toEqual({ hour: 6, minute: 45, pm: false });
+    expect(to12Hour(new Time(0, 5))).toEqual({ hour: 12, minute: 5, pm: false });
+    expect(to12Hour(new Time(12, 0))).toEqual({ hour: 12, minute: 0, pm: true });
+    expect(to12Hour(new Time(18, 30))).toEqual({ hour: 6, minute: 30, pm: true });
+    expect(from12Hour(12, 0, false).hour).toBe(0);
+    expect(from12Hour(12, 0, true).hour).toBe(12);
+    expect(from12Hour(6, 45, true).toString()).toBe('18:45:00');
+  });
+  it('minute steps', () => {
+    expect(minuteChoices(5)).toHaveLength(12);
+    expect(minuteChoices(5).at(-1)).toBe(55);
+    expect(minuteChoices(1)).toHaveLength(60);
+    expect(snapMinute(47, 5)).toBe(45);
+    expect(snapMinute(47, 1)).toBe(47);
+  });
+});

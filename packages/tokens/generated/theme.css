@@ -41,6 +41,7 @@
   --dk-color-accent-text: #155dfc;
   --dk-color-divider: #e4e4e7;
   --dk-color-control: #71717b;
+  --dk-color-scrim: #00000066;
   --dk-system-bars: #ffffff;
 }
 
@@ -84,11 +85,12 @@
   --dk-color-accent-text: #2b7fff;
   --dk-color-divider: #3f3f46;
   --dk-color-control: #71717b;
+  --dk-color-scrim: #00000099;
   --dk-system-bars: #09090b;
 }
 
 /* Roles daisyUI has no colour for, as Tailwind colours: bg-background,
-   bg-raised, text-muted, text-accent-text, border-divider, border-control. */
+   bg-raised, bg-scrim, text-muted, text-accent-text, border-divider, border-control. */
 @theme inline {
   --color-background: var(--dk-color-background);
   --color-raised: var(--dk-color-raised);
@@ -96,6 +98,7 @@
   --color-accent-text: var(--dk-color-accent-text);
   --color-divider: var(--dk-color-divider);
   --color-control: var(--dk-color-control);
+  --color-scrim: var(--dk-color-scrim);
 }
 
 /* The scale, as Tailwind theme variables (not inline), so utilities read

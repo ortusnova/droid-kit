@@ -17,6 +17,11 @@ specta = { version = "=2.0.0-rc.28", features = ["derive"] }
 tauri-specta = { version = "=2.0.0-rc.29", features = ["derive", "typescript"] }
 specta-typescript = "=0.0.15"
 
+[target.'cfg(not(target_os = "android"))'.dependencies]
+droid-kit-reminderd = { path = "../droid-kit-reminderd" }
+zbus = "=6.5.0"
+futures-lite = "=2.6.1"
+
 [target.'cfg(target_os = "android")'.dependencies]
 tauri-plugin-notification = "=2.8.1"
 

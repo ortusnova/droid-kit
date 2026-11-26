@@ -7,4 +7,28 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# The service itself: `cargo build -p droid-kit-reminderd --features daemon`.
+# Without it this is a library (the schedule model, next-due computation, unit
+# file text, D-Bus interfaces and the wake-up check) that the Tauri plugin uses
+# without the async runtime.
+default = []
+daemon = ["dep:tokio", "dep:futures-util", "zbus/tokio"]
+
+[lib]
+name = "droid_kit_reminderd"
+
+[[bin]]
+name = "droid-kit-reminderd"
+path = "src/main.rs"
+required-features = ["daemon"]
+
 [dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+# The tz database is bundled so that the daemon, built static, still knows the
+# rules on a system without /usr/share/zoneinfo. The system's database is used first.
+jiff = { version = "=1.0.3", features = ["tzdb-bundle-always"] }
+zbus = "=6.5.0"
+tokio = { version = "=1.54.1", features = ["rt", "macros", "time", "sync"], optional = true }
+futures-util = { version = "=0.3.34", default-features = false, features = ["std"], optional = true }

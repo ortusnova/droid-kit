@@ -139,6 +139,22 @@ fn engine() -> (&'static str, Option<String>) {
     }
 }
 
+/// Makes the Wayland app id of the app's windows the
+/// application identifier, the same name Android uses for the package.
+///
+/// GTK 3 names a toplevel after `g_get_prgname()` when the window is first
+/// shown, and Tauri leaves that at the executable's name. Tauri's own
+/// `app.enableGTKAppId` does not help: it only gives the `GApplication` the
+/// identifier, which also makes GTK own that name on the session bus, where
+/// the reminders plugin already owns it. A plugin's setup runs when the app is
+/// built, after GTK is initialised and before Tauri creates the windows from
+/// the config, so the name is in place in time. `g_set_prgname` may be called
+/// again after `gtk_init`.
+#[cfg(target_os = "linux")]
+fn set_window_app_id(identifier: &str) {
+    webkit2gtk::glib::set_prgname(Some(identifier));
+}
+
 fn init_script() -> String {
     let (name, version) = engine();
     // Debug builds only: the screen to open first, from `dk run --route`.
@@ -162,6 +178,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(not(target_os = "android"))]
             let platform = Platform::<R> { _marker: std::marker::PhantomData };
             app.manage(platform);
+            #[cfg(target_os = "linux")]
+            set_window_app_id(&app.config().identifier);
             #[cfg(all(target_os = "linux", debug_assertions))]
             screenshot::arm_fallback(app.clone());
             Ok(())

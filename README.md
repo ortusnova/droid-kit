@@ -99,6 +99,11 @@ On `linux-desktop`:
   No window capture is involved, so no other window can end up in the picture,
   whatever has focus. If the app cannot write one, `dk` says "no screenshot: …"
   and the run's result is unchanged.
+- The window's Wayland app id is the app's identifier,
+  as on Android, so a desktop file named `<identifier>.desktop` matches it. The
+  platform plugin sets it when the app is built. Do not set Tauri's
+  `app.enableGTKAppId`: it makes GTK own the identifier on the session bus,
+  where the reminders plugin owns it already.
 - A container of an earlier run (`dk-<app>`, running or crashed) is removed
   before the build and again before the start.
 - The host's locale variables (`LANG`, `LC_*`, `LANGUAGE`) go into the

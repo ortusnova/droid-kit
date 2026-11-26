@@ -107,6 +107,9 @@ struct Saved {
     handled: HashMap<String, Handled>,
     /// Notification id from the server → reminder id, so a tap after a restart still finds it.
     notifications: Vec<(u32, String)>,
+    /// The wake-up PowerDevil may still hold from the last run, cleared when the service starts.
+    #[serde(default)]
+    wake_cookie: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -164,6 +167,7 @@ pub async fn run(cfg: Config) -> Result<(), Box<dyn std::error::Error>> {
         can_wake,
     };
     daemon.refresh_wake_support().await;
+    daemon.clear_stale_wake().await;
 
     loop {
         let sleep_for = daemon.tick().await;
@@ -247,6 +251,8 @@ impl Daemon {
                 log!("PowerDevil called wakeupCallback({cookie})");
                 if self.registered.is_some_and(|(c, _)| c as i32 == cookie) {
                     self.registered = None;
+                    self.saved.wake_cookie = None;
+                    self.save();
                 }
             }
             Event::Resumed => log!("the device resumed"),
@@ -258,6 +264,16 @@ impl Daemon {
             Event::Action(id, key) => self.action(id, key).await,
             Event::Open(reminder) => self.open(&reminder).await,
         }
+    }
+
+    /// PowerDevil keeps a wake-up after the service that asked for it was restarted,
+    /// and would call back for it as well as for the new one.
+    async fn clear_stale_wake(&mut self) {
+        let Some(cookie) = self.saved.wake_cookie.take() else { return };
+        if let Ok(power) = PowerManagementProxy::new(&self.conn).await {
+            let _ = power.clear_wakeup(cookie as i32).await;
+        }
+        self.save();
     }
 
     async fn refresh_wake_support(&mut self) {
@@ -326,6 +342,9 @@ impl Daemon {
 
         for r in self.reminders.clone() {
             let fingerprint = r.repeat.fingerprint();
+            let known = self.saved.handled.contains_key(&r.id);
+            // First sight: occurrences before now are not ours to deliver. Saved, so a restart keeps the baseline.
+            dirty |= !known;
             let entry = self.saved.handled.entry(r.id.clone()).or_insert_with(|| Handled { fingerprint: fingerprint.clone(), until: now_s });
             if entry.fingerprint != fingerprint {
                 // Replaced: a new rule starts from now.
@@ -387,8 +406,10 @@ impl Daemon {
         let Ok(power) = PowerManagementProxy::new(&self.conn).await else { return };
         if let Some((cookie, _)) = self.registered.take() {
             let _ = power.clear_wakeup(cookie as i32).await;
+            self.saved.wake_cookie = None;
         }
         let Some(due) = want else {
+            self.save();
             self.wake_accepted = false;
             self.publish_can_wake();
             return;
@@ -398,6 +419,8 @@ impl Daemon {
             Ok(cookie) => {
                 log!("PowerDevil accepted scheduleWakeup({:?}, {path}, {due}): cookie {cookie}", names::service_bus_name(&self.cfg.app_id));
                 self.registered = Some((cookie, due));
+                self.saved.wake_cookie = Some(cookie);
+                self.save();
                 self.wake_accepted = true;
             }
             Err(e) => {

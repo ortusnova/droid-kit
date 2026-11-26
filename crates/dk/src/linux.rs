@@ -72,7 +72,8 @@ fn uses_reminders(app: &App) -> bool {
 
 /// Builds the reminders service static (a musl binary that also runs on this
 /// laptop's glibc host, where the notifications are delivered) and puts it next
-/// to the app's binary, where the plugin looks for it. Alpine's Rust links the C
+/// to the app's binary, where the plugin looks for it (replaced by a rename, as
+/// the old one may be running). Alpine's Rust links the C
 /// library dynamically unless told otherwise, and `--target` keeps that flag away
 /// from build scripts and proc macros, which must stay dynamic.
 fn build_reminderd(app: &App) -> Result<()> {
@@ -82,7 +83,8 @@ fn build_reminderd(app: &App) -> Result<()> {
     let root = app.root.display();
     let script = format!(
         "T=$(rustc -vV | sed -n 's/^host: //p') && cargo build -p droid-kit-reminderd --features daemon --target $T \
-         && cp {root}/target/alpine-reminderd/$T/debug/droid-kit-reminderd {root}/target/alpine/debug/"
+         && cp {root}/target/alpine-reminderd/$T/debug/droid-kit-reminderd {root}/target/alpine/debug/droid-kit-reminderd.new \\
+         && mv -f {root}/target/alpine/debug/droid-kit-reminderd.new {root}/target/alpine/debug/droid-kit-reminderd"
     );
     let mut c = Command::new("podman");
     c.args(["run", "--rm", "--security-opt", "label=disable", "--userns=keep-id"]);
@@ -186,7 +188,23 @@ fn session_args(app: &App, runtime: &str, wayland: &str) -> Result<Vec<String>> 
         }
     }
     a.extend(["-e".into(), "HOME=/tmp".into()]);
+    // The container has no time zone of its own and would run in UTC, so the
+    // app's local times (a reminder "in 2 minutes") would not be this
+    // desktop's. ICU, which WebKit uses, reads `TZ`; the rules are mounted for C code.
+    if let Some(zone) = host_time_zone() {
+        a.extend(["-e".into(), format!("TZ={zone}")]);
+        if Path::new("/usr/share/zoneinfo").is_dir() {
+            a.extend(["-v".into(), "/usr/share/zoneinfo:/usr/share/zoneinfo:ro".into()]);
+        }
+    }
     Ok(a)
+}
+
+/// The IANA name of this machine's time zone, from the `/etc/localtime` link.
+fn host_time_zone() -> Option<String> {
+    let target = fs::read_link("/etc/localtime").ok()?;
+    let target = target.to_string_lossy();
+    target.split_once("zoneinfo/").map(|(_, name)| name.to_string())
 }
 
 pub fn run_desktop(app: &App, timeout: u64, route: Option<&str>) -> Result<ExitCode> {
@@ -261,4 +279,16 @@ fn screenshot_active_window(path: &Path) -> Result<()> {
         sleep(0.25);
     }
     anyhow::bail!("spectacle did not write {}", path.display())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shell_words_are_quoted_for_the_launcher_script() {
+        assert_eq!(shell_quote("plain"), "'plain'");
+        assert_eq!(shell_quote("it's here"), "'it'\\''s here'");
+        assert_eq!(shell_quote("a b$c"), "'a b$c'");
+    }
 }

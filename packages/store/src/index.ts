@@ -7,7 +7,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { StoreError, type Backend, type BackendInfo, type Param, type Row, type Statement } from './backend';
 import { tauriBackend } from './tauri';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 export { StoreError, isBlankSql } from './backend';
 export type { Backend, BackendInfo, Param, Row, Statement, StoreErrorKind } from './backend';
 export * from './records';

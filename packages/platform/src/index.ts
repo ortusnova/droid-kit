@@ -4,7 +4,7 @@ import { runBackInterceptor } from './back';
 
 export { pushBackInterceptor, runBackInterceptor } from './back';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 
 export type Platform = 'android' | 'linux' | 'ios' | 'web' | (string & {});
 export type FormFactor = 'phone' | 'desktop';

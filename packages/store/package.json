@@ -1,7 +1,7 @@
 {
   "name": "@droid-kit/store",
   "description": "droid-kit local storage: one SQLite database per app, migrations, atomic batches, records ready for sync",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "exports": {

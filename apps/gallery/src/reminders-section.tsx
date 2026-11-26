@@ -32,6 +32,15 @@ export function RemindersSection() {
       setOpened(id);
       setOpenedCount(n => n + 1);
     }).then(s => (stop = s));
+    // Debug builds: `dk run linux-desktop --route '/?remind=2'` schedules the test reminder on start, for checks that cannot press a button.
+    const remind = /[?&]remind=(\d+)/.exec(window.__DK__?.startRoute ?? '')?.[1];
+    if (remind) {
+      const at = inMinutes(Number(remind));
+      void schedule({ id: 'test-once', title: 'droid-kit test', body: `Due at ${at.time}`, repeat: { kind: 'once', ...at } }).then(r => {
+        setResult(r.ok ? 'scheduled test-once' : `error: ${JSON.stringify(r.error)}`);
+        return refresh();
+      });
+    }
     return () => stop?.();
   }, []);
 

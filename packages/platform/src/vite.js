@@ -16,6 +16,11 @@ const bootSource = readFileSync(new URL('./boot.cjs', import.meta.url), 'utf8');
 export function droidKit() {
   return {
     name: 'droid-kit',
+    // The kit's components and the app must share one copy of React, React Aria
+    // and the date library, or their contexts (the router bridge, the theme
+    // providers) do not meet. Normally one copy is installed; with `dk kit
+    // local` the kit checkout has its own node_modules.
+    config: () => ({ resolve: { dedupe: ['react', 'react-dom', 'react-aria-components', '@internationalized/date'] } }),
     transformIndexHtml: {
       order: 'post',
       handler(html) {

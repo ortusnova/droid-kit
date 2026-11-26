@@ -1,7 +1,7 @@
 {
   "name": "@droid-kit/tokens",
   "description": "droid-kit design tokens",
-  "version": "0.0.2",
+  "version": "0.1.0-rc.1",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -15,6 +15,9 @@
     "check": "node scripts/generate.ts --check",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "daisyui": "5.8.2"
   },
   "devDependencies": {
     "@types/node": "26.6.10",

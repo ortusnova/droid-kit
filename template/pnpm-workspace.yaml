@@ -1,0 +1,16 @@
+# This file makes the app its own pnpm workspace, which is where pnpm reads
+# these settings.
+
+# The app is built on this machine (glibc), in the Alpine image (musl) and on
+# the Android build host (x86_64), from one node_modules, so install native
+# packages for all of them.
+supportedArchitectures:
+  os: [linux]
+  cpu: [arm64, x64]
+  libc: [glibc, musl]
+
+# Exact versions that are newer than pnpm's minimum release age.
+minimumReleaseAgeExclude:
+  - '@types/react@19.3.3'
+  - '@types/node@26.6.10'
+  - lucide-react@1.80.0

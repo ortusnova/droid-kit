@@ -69,6 +69,7 @@ fn kit_checks(root: &Path) -> Result<bool> {
     for (what, script, args) in [
         ("design tokens", "packages/tokens/scripts/generate.ts", &["--check"][..]),
         ("colour literals in components", "scripts/check-colours.mjs", &[][..]),
+        ("version in every manifest", "scripts/set-version.mjs", &["--check"][..]),
     ] {
         eprintln!("kit: {what}");
         let status = std::process::Command::new("node")

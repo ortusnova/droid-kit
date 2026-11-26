@@ -1,0 +1,6 @@
+# dk settings for __DK_NAME__. Machine-specific values (adb path, phone
+# address) go in dk.local.toml, which is not committed. See the droid-kit
+# README for every setting.
+[app]
+# The directory synced to the Android build host. The app is its own root.
+root = "."

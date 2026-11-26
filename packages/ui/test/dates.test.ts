@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CalendarDate, Time } from '@internationalized/date';
 import {
   cadenceOfKind,
+  twoLetters,
   dialAngle,
   dialHour,
   dialMinute,
@@ -113,5 +114,18 @@ describe('locales from the environment', () => {
     expect(() => weekOf(new CalendarDate(2026, 11, 25), 'C')).not.toThrow();
     expect(uses12HourClock('C')).toBe(true);
     expect(weekdayOrder('C')[0]).toBe(7);
+  });
+});
+
+describe('weekday labels', () => {
+  it('uses two letters, so Tuesday and Thursday differ', () => {
+    const f = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' });
+    const week = [1, 2, 3, 4, 5, 6, 7].map(d => twoLetters(f.format(new Date(Date.UTC(2026, 10, 22 + d)))));
+    expect(week).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+    expect(new Set(week).size).toBe(7);
+  });
+  it('keeps names that are already short, and drops an abbreviation dot', () => {
+    expect(twoLetters('日')).toBe('日');
+    expect(twoLetters('lun.')).toBe('lu');
   });
 });

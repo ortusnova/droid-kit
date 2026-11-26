@@ -126,3 +126,8 @@ export function dialHour(angle: number, innerRing: boolean): number {
   if (innerRing) return i === 0 ? 0 : i + 12;
   return i === 0 ? 12 : i;
 }
+
+/** The first two letters of a short weekday name ("Thu" → "Th"); names already shorter stay whole. */
+export function twoLetters(name: string): string {
+  return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(name.replace(/\.$/, ''))].slice(0, 2).map(g => g.segment).join('');
+}

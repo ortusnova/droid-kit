@@ -34,6 +34,7 @@ import { useCloseOnBack } from './back';
 import { dataAttributes, type DataAttributes } from './dom';
 import {
   cadenceOfKind,
+  twoLetters,
   safeLocale,
   dialAngle,
   dialHour,
@@ -632,7 +633,8 @@ export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: {
   const locale = safeLocale(useLocale().locale);
   const order = weekdayOrder(locale);
   // Dates are turned into instants at UTC midnight, so format them in UTC too.
-  const narrow = new Intl.DateTimeFormat(locale, { weekday: 'narrow', timeZone: 'UTC' });
+  // Two letters (Mo Tu We Th Fr Sa Su), so no two buttons look alike as one-letter names do (Brian, 2026-11-26).
+  const short = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
   const long = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
   // 2026-11-23 is a Monday: ISO weekday n is that date plus n - 1 days.
   const dateOf = (d: Weekday) => new CalendarDate(2026, 11, 22 + d).toDate('UTC');
@@ -655,7 +657,7 @@ export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: {
               onPress={() => onChange(toggleWeekday(value, d))}
               className={({ isSelected }) => `btn btn-circle size-touch min-h-0 ${isSelected ? 'btn-primary' : 'btn-ghost bg-base-200'}`}
             >
-              {narrow.format(dateOf(d))}
+              {twoLetters(short.format(dateOf(d)))}
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
@@ -666,3 +668,4 @@ export function CadencePicker({ label = 'Cadence', value, onChange, ...rest }: {
 
 export type { Cadence, CadenceKind, Weekday };
 export { Time, CalendarDate };
+

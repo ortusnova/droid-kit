@@ -4,5 +4,5 @@
 const COMMANDS: &[&str] = &["schedule", "cancel", "list", "capabilities", "take_opened", "open_settings", "register_listener", "remove_listener"];
 
 fn main() {
-    tauri_plugin::Builder::new(COMMANDS).android_path("android").build();
+    tauri_plugin::Builder::new(COMMANDS).android_path("android").ios_path("ios").build();
 }

@@ -64,7 +64,7 @@ export function capabilities(): Promise<Capabilities> {
  */
 export async function onReminderOpened(handler: (id: string) => void): Promise<() => void> {
   // Linux and other platforms send the plugin's event; Android's Kotlin side
-  // sends its own `tapped` event for a tap while the app runs.
+  // and iOS's Swift side send their own `tapped` event for a tap while the app runs.
   const stop = await events.reminderOpened.listen(e => handler(e.payload.id));
   const android = await addPluginListener<{ id: string }>('droid-kit-reminders', 'tapped', e => handler(e.id)).catch(() => undefined);
   const atStart = await commands.takeOpened();

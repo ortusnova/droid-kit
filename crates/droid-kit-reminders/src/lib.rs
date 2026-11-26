@@ -6,13 +6,16 @@
 //! that list into system alarms:
 //! - Android: `tauri-plugin-notification`, which schedules with AlarmManager,
 //!   always allowed while idle.
+//! - iOS: this plugin's Swift part, with a calendar trigger per occurrence rule.
 //! - Linux: the `droid-kit-reminderd` user service (see that crate), which
 //!   reads the same file.
 
 mod model;
 #[cfg(target_os = "android")]
 mod android;
-#[cfg(not(target_os = "android"))]
+#[cfg(target_os = "ios")]
+mod ios;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 mod linux;
 
 use std::path::PathBuf;
@@ -128,7 +131,9 @@ async fn take_opened<R: Runtime>(app: AppHandle<R>) -> Option<String> {
 
 #[cfg(target_os = "android")]
 use android as platform;
-#[cfg(not(target_os = "android"))]
+#[cfg(target_os = "ios")]
+use ios as platform;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use linux as platform;
 
 /// Records a reminder that opened the app, and tells a running page.

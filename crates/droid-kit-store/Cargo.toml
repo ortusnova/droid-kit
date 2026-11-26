@@ -1,0 +1,23 @@
+[package]
+name = "droid-kit-store"
+description = "Tauri plugin: one local SQLite database per app, with migrations and atomic batches"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+links = "droid-kit-store"
+
+[dependencies]
+tauri = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "=2.0.21"
+specta = { version = "=2.0.0-rc.28", features = ["derive", "serde_json"] }
+tauri-specta = { version = "=2.0.0-rc.29", features = ["derive", "typescript"] }
+specta-typescript = "=0.0.15"
+# SQLite is compiled into the app, so no system library is needed (Android, musl).
+rusqlite = { version = "=0.43.0", features = ["bundled"] }
+
+[build-dependencies]
+tauri-plugin = { workspace = true }

@@ -1,0 +1,26 @@
+{
+  "name": "@droid-kit/store",
+  "description": "droid-kit local storage: one SQLite database per app, migrations, atomic batches, records ready for sync",
+  "version": "0.1.3",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./test": "./src/memory.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "uuid": "14.0.3"
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": "^2.12.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "2.12.5",
+    "@types/node": "26.6.10",
+    "vitest": "5.1.2"
+  }
+}

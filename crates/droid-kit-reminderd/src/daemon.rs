@@ -23,8 +23,8 @@ use zbus::names::BusName;
 use zbus::{Connection, MatchRule, MessageStream, Variant, interface};
 
 use crate::dbus::{ApplicationProxy, LoginProxy, NotificationsProxy, POWERDEVIL_NAME, PowerManagementProxy};
-use crate::model::{Reminder, parse_schedule};
-use crate::{due, names, wake};
+use crate::model::{Reminder, Repeat, parse_schedule};
+use crate::{due, names, store, wake};
 
 /// The longest the loop sleeps. The monotonic clock stops while the device is
 /// suspended, so a long sleep would overshoot after a resume; this bounds the
@@ -324,6 +324,25 @@ impl Daemon {
         }
     }
 
+    /// A delivered one-time reminder is done: take it out of the file, as the
+    /// Android receiver does, so the app's `list` stops showing it. Only this
+    /// service's own write to the file, and it reads the file again first (see `store`).
+    /// `file_stamp` is left alone, so the next pass reads the file once more; that
+    /// read does not write, so the service cannot trigger itself.
+    fn remove_delivered_once(&mut self, delivered: &[Reminder]) {
+        if delivered.is_empty() {
+            return;
+        }
+        match store::remove_delivered(&self.cfg.data_dir.join("reminders.json"), delivered) {
+            Ok(n) => {
+                log!("removed {n} delivered one-time reminder(s) from reminders.json: {}", delivered.iter().map(|r| r.id.as_str()).collect::<Vec<_>>().join(", "));
+                self.reminders.retain(|r| !delivered.iter().any(|d| d.id == r.id && d.repeat == r.repeat));
+            }
+            // Delivered all the same: the saved baseline keeps it from being delivered again.
+            Err(e) => log!("could not remove the delivered reminder(s) from reminders.json: {e}"),
+        }
+    }
+
     /// Delivers what is due, keeps PowerDevil's wake-up on the next due time,
     /// and says how long the loop may sleep.
     async fn tick(&mut self) -> Duration {
@@ -334,6 +353,7 @@ impl Daemon {
         let mut dirty = false;
         let mut retry = false;
         let mut next: Option<Timestamp> = None;
+        let mut delivered_once: Vec<Reminder> = Vec::new();
 
         let ids: Vec<&str> = self.reminders.iter().map(|r| r.id.as_str()).collect();
         let before = self.saved.handled.len();
@@ -359,6 +379,9 @@ impl Daemon {
                             e.until = now_s;
                         }
                         dirty = true;
+                        if matches!(r.repeat, Repeat::Once { .. }) {
+                            delivered_once.push(r.clone());
+                        }
                     }
                     Err(e) => {
                         log!("could not deliver {}: {e}; trying again in {}s", r.id, RETRY.as_secs());
@@ -379,6 +402,7 @@ impl Daemon {
                 next = Some(next.map_or(t, |n| n.min(t)));
             }
         }
+        self.remove_delivered_once(&delivered_once);
         if dirty {
             self.save();
         }

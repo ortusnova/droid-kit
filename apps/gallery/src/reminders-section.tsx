@@ -34,12 +34,22 @@ export function RemindersSection() {
     }).then(s => (stop = s));
     // Debug builds: `dk run linux-desktop --route '/?remind=2'` schedules the test reminder on start, for checks that cannot press a button.
     const remind = /[?&]remind=(\d+)/.exec(window.__DK__?.startRoute ?? '')?.[1];
+    // `&daily=N` also schedules the test daily reminder, N minutes ahead.
+    const daily = /[?&]daily=(\d+)/.exec(window.__DK__?.startRoute ?? '')?.[1];
     if (remind) {
       const at = inMinutes(Number(remind));
-      void schedule({ id: 'test-once', title: 'droid-kit test', body: `Due at ${at.time}`, repeat: { kind: 'once', ...at } }).then(r => {
-        setResult(r.ok ? 'scheduled test-once' : `error: ${JSON.stringify(r.error)}`);
-        return refresh();
-      });
+      void schedule({ id: 'test-once', title: 'droid-kit test', body: `Due at ${at.time}`, repeat: { kind: 'once', ...at } })
+        .then(async r => {
+          if (daily && r.ok) {
+            const d = inMinutes(Number(daily));
+            return schedule({ id: 'test-daily', title: 'droid-kit daily test', body: `Every day at ${d.time}`, repeat: { kind: 'daily', time: d.time } });
+          }
+          return r;
+        })
+        .then(r => {
+          setResult(r.ok ? 'scheduled test reminders' : `error: ${JSON.stringify(r.error)}`);
+          return refresh();
+        });
     }
     return () => stop?.();
   }, []);

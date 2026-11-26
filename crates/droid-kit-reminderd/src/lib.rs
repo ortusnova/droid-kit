@@ -9,6 +9,7 @@ pub mod dbus;
 pub mod due;
 pub mod model;
 pub mod names;
+pub mod store;
 pub mod wake;
 
 #[cfg(feature = "daemon")]

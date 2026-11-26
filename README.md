@@ -60,6 +60,7 @@ the kit by tag; run that one from such an app.
 | `dk run linux-desktop` | Builds the app in the Alpine (musl) image and opens it on this machine's Wayland session. |
 | `dk run android-phone` | Builds on the Android build host, installs on the phone over wireless debugging, and launches it. |
 | `dk run android-emulator` | Builds for x86_64 and runs it on the build host's emulator. |
+| `dk run ios-phone` | Builds on this Linux machine with xtool, signs with your Apple ID, installs on the iPhone on USB, and launches it. |
 | `dk new life-droid --id com.ortusnova.lifedroid` | Makes an app from `template/`, pinned to the kit tag of this `dk`. |
 | `dk check` | Checks that every kit dependency names the same tag. |
 | `dk kit local ../droid-kit` | Uses a local kit checkout instead of the pinned tag. |
@@ -74,6 +75,7 @@ dk doctor
 dk run linux-desktop
 dk run android-phone --timeout 120
 dk run android-emulator
+dk run ios-phone
 dk check
 dk kit local ~/dev/droid-kit   # from an app that pins a kit tag
 dk kit pin
@@ -112,6 +114,34 @@ On `linux-desktop`:
   before the build and again before the start.
 - The host's locale variables (`LANG`, `LC_*`, `LANGUAGE`) go into the
   container. Without them WebKitGTK reports `navigator.language` as `C`.
+
+On `ios-phone` (no Mac, no Xcode install, no paid developer account):
+
+- Once per machine: Swift 6.3 (`swiftly`; on a distribution swiftly does not
+  know, `swiftly init --platform fedora39` or the like), the
+  [xtool](https://xtool.sh) AppImage, `xtool auth login --mode password` with
+  your Apple ID, `xtool sdk install <Xcode 26 .xip>` (the `.xip` from
+  developer.apple.com, free Apple ID; xtool only takes the iOS SDK out of it),
+  `rustup target add aarch64-apple-ios`, `jq`, `usbmuxd`, and
+  `uv tool install pymobiledevice3`.
+- Once per iPhone: plug it in and trust the computer, install any app once,
+  then Settings → General → VPN & Device Management → your Apple ID → Trust,
+  and Settings → Privacy & Security → Developer Mode (the phone restarts). For
+  `scripts/iphone.sh` and `app-check --ios`, also Settings → Apps → Safari →
+  Advanced → Web Inspector.
+- `scripts/ios-build.sh` (which `dk` embeds) cross-compiles the app's Rust
+  library with clang and that SDK, copies Tauri's Swift runtime and every
+  plugin's `ios/` Swift package into a SwiftPM package it generates in
+  `<app>/.dk/ios/`, and has xtool build, sign and install it. The home-screen
+  name is the product name, the icon is `src-tauri/icons/icon.png`.
+- `dk` stops the running app first (an app started by the developer services
+  makes the next install hang at `[Connecting] 100%`), launches it with
+  pymobiledevice3, and waits for `DK_READY` in the device log.
+- With a free Apple ID, xtool installs the app as `XTL-<team>.<identifier>`.
+- `scripts/iphone.sh <identifier>` has `launch`, `stop`, `shot`, `logs`, and
+  `js` and `tap` through Web Inspector (`cdp` starts the bridge). The app must
+  be in front: iOS does not let Web Inspector reach a suspended app.
+- `KIT_LOCAL=<kit checkout>` builds against a local kit without `dk kit local`.
 
 ### Errors the kit reports
 
@@ -173,6 +203,11 @@ image = "localhost/droid-kit-linux:latest"  # built from containers/linux-build 
   first.
 - The phone must be awake or have no PIN. `dk run android-phone` wakes it and
   lifts the keyguard, which works only without a PIN.
+- iPhone, free Apple ID: the signature lasts 7 days (run `dk run ios-phone`
+  again to renew it), at most 3 sideloaded apps at a time, 10 new app ids a
+  week. Debug builds only.
+- iPhone: native prompts (the notification permission) need a person to tap
+  them, and the page's presses from scripts are DOM activations, not touches.
 
 ## Storage
 
